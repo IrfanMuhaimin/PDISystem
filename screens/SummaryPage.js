@@ -1,6 +1,9 @@
-// SummaryPage.js
+// screens/SummaryPage.js
 import React, { useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import {View, Text, ScrollView, StyleSheet, Modal, Image, TouchableOpacity, Platform, Alert,ActivityIndicator} from 'react-native';
+import {
+    View, Text, ScrollView, StyleSheet, Modal, Image,
+    TouchableOpacity, Platform, Alert, ActivityIndicator
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
 import { ChecklistContext } from '../context/ChecklistContext'; // Adjust path if needed
@@ -8,6 +11,7 @@ import { jwtDecode } from 'jwt-decode';
 import ScreenWrapper from '../styles/flowstudiosbg.js'; // Adjust path if needed
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
 
+// --- Constants ---
 const imageKeys = ['vehicle1', 'vehicle2', 'vehicle3'];
 const baseImages = {
     'vehicle1': require('../assets/vehicle.png'),
@@ -18,13 +22,14 @@ const MARKER_SIZE = 24;
 const OLD_MARK_MODAL_IMAGE_WIDTH = 500;
 const OLD_MARK_MODAL_IMAGE_HEIGHT = 600;
 
-// --- API Endpoints (Keep Original) ---
+// --- API Endpoints ---
 const API_BASE_URL = 'http://pdi.flowstudios.com.my/api';
 const USERS_API_ENDPOINT = `${API_BASE_URL}/users`;
 const JOBCARD_SUBMIT_ENDPOINT = `${API_BASE_URL}/jobcards`;
 
+// --- Component ---
 export default function SummaryPage({ navigation }) {
-    // --- Original Context and State ---
+    // --- Context and State (Original) ---
     const { checklist, carInfo, updateCarInfo } = useContext(ChecklistContext);
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
@@ -35,11 +40,12 @@ export default function SummaryPage({ navigation }) {
     const [supervisors, setSupervisors] = useState([]);
     const [isLoadingSupervisors, setIsLoadingSupervisors] = useState(true);
     const [supervisorFetchError, setSupervisorFetchError] = useState(null);
-    // --- End Original State ---
+    // --- End Context and State ---
 
 
-    // --- Original Memos ---
+    // --- Memos (Original + Severity for Display) ---
     const summary = useMemo(() => {
+        // Original summary calculation remains unchanged
         if (!checklist || typeof checklist !== 'object') { return []; }
         try {
             return Object.entries(checklist).map(([section, items]) => {
@@ -50,29 +56,36 @@ export default function SummaryPage({ navigation }) {
     }, [checklist]);
 
     const defectSummary = useMemo(() => {
+        // Extracts severity for display purposes
+        console.log("[Memo] Calculating defectSummary...");
         if (!checklist || typeof checklist !== 'object') { return []; }
         try {
             return Object.entries(checklist).flatMap(([section, items]) => {
                 const validItems = Array.isArray(items) ? items : [];
                 return validItems
-                    .filter(item => item?.defect)
-                    .map(item => ({
-                        section,
-                        name: item.name,
-                        category: item.defectDetails?.category || 'N/A',
-                        type: item.defectDetails?.type || 'N/A',
-                        remarks: item.defectDetails?.remarks || 'No remarks',
-                        location: item.defectDetails?.location || 'N/A',
-                        marks: item.defectDetails?.marks || [],
-                        selectedImage: item.defectDetails?.selectedImage || 'vehicle1',
-                    }));
+                    .filter(item => item?.defect && item?.defectDetails) // Ensure defectDetails exists
+                    .map(item => {
+                        // --- ADDED: severity extraction for display ---
+                        return {
+                            section,
+                            name: item.name,
+                            category: item.defectDetails?.category || 'N/A',
+                            type: item.defectDetails?.type || 'N/A',
+                            severity: item.defectDetails?.severity || 'N/A', // <-- SEVERITY FOR DISPLAY
+                            remarks: item.defectDetails?.remarks || 'No remarks',
+                            location: item.defectDetails?.location || 'N/A',
+                            marks: item.defectDetails?.marks || [],
+                            selectedImage: item.defectDetails?.selectedImage || 'vehicle1',
+                         };
+                        // --- END ADDITION ---
+                    });
             });
         } catch (error) { console.error("[Memo: defectSummary] Error:", error); return []; }
     }, [checklist]);
-    // --- End Original Memos ---
+    // --- End Memos ---
 
 
-    // --- Original useEffect for supervisors ---
+    // --- useEffect for supervisors (Original) ---
     useEffect(() => {
         if (isSubmitting) { console.log("[SupervisorFetch - SummaryPage] Skipping fetch: isSubmitting is true."); return; }
         let isMounted = true;
@@ -109,26 +122,26 @@ export default function SummaryPage({ navigation }) {
         fetchAndFilterSupervisors();
         return () => { isMounted = false; console.log("[SupervisorFetch - SummaryPage] Unmounting, fetch cancelled/ignored."); };
     }, [isSubmitting]);
-    // --- End Original useEffect ---
+    // --- End useEffect ---
 
 
-    // --- Original Helper Functions ---
+    // --- Helper Functions (Original) ---
     const getImageSource = (selectedImageKey) => baseImages[selectedImageKey] || baseImages['vehicle1'];
     const handleNextImage = () => { const currentIndex = imageKeys.indexOf(selectedImageKeyForModal); const nextIndex = (currentIndex + 1) % imageKeys.length; setSummaryImageLayout(null); setSelectedImageKeyForModal(imageKeys[nextIndex]); };
     const handlePreviousImage = () => { const currentIndex = imageKeys.indexOf(selectedImageKeyForModal); const previousIndex = (currentIndex - 1 + imageKeys.length) % imageKeys.length; setSummaryImageLayout(null); setSelectedImageKeyForModal(imageKeys[previousIndex]); };
     const formatTime = (date) => { if (!date) return 'N/A'; const dateObj = date instanceof Date ? date : new Date(date); if (isNaN(dateObj.getTime())) return 'Invalid Date'; try { return dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }); } catch { return 'Error'; } };
     const onSummaryImageLayout = useCallback((event) => { console.log("[Summary Layout] onLayout fired"); const { width, height } = event.nativeEvent.layout; if (width > 0 && height > 0) { if (!summaryImageLayout || summaryImageLayout.width !== width || summaryImageLayout.height !== height) { console.log(`[Summary Layout] *** Setting layout state: ${width}x${height} ***`); setSummaryImageLayout({ width, height }); } } else { console.warn(`[Summary Layout] Invalid dimensions: ${width}x${height}`); } }, [summaryImageLayout]);
-    // --- End Original Helper Functions ---
+    // --- End Helper Functions ---
 
 
-    // --- Original Mark Calculation for DISPLAY ---
+    // --- Mark Calculation for DISPLAY (Original) ---
     const currentImageKey = selectedImageKeyForModal || imageKeys[0];
     const defectsForCurrentImage = useMemo(() => { if (!Array.isArray(defectSummary)) return []; return defectSummary.filter(defect => defect.selectedImage === currentImageKey); }, [defectSummary, currentImageKey]);
     const renderableMarks = useMemo(() => { console.log("[Memo] Calculating renderable marks for DISPLAY. Layout:", summaryImageLayout ? 'Yes' : 'No', "Defect count:", defectsForCurrentImage.length); if (!summaryImageLayout || !Array.isArray(defectsForCurrentImage) || defectsForCurrentImage.length === 0) { return []; } const marks = []; defectsForCurrentImage.forEach((defect, index) => { const defectMarks = Array.isArray(defect.marks) ? defect.marks : []; defectMarks.forEach((mark, j) => { if (mark && typeof mark.nx === 'number' && typeof mark.ny === 'number') { const pixelX = mark.nx * summaryImageLayout.width; const pixelY = mark.ny * summaryImageLayout.height; marks.push({ key: `${defect.name}-${index}-${j}`, pixelX: pixelX - MARKER_SIZE / 2, pixelY: pixelY - MARKER_SIZE / 2, location: defect.location }); } else { console.warn(`[Mark Calc Display] Expected {nx, ny} but found:`, mark); } }); }); console.log("[Memo] Calculated marks for display:", marks.length); return marks; }, [summaryImageLayout, defectsForCurrentImage]);
-    // --- End Original Mark Calculation ---
+    // --- End Mark Calculation ---
 
 
-    // --- Original handleFinish Function ---
+    // --- handleFinish Function - MUST INCLUDE SEVERITY ---
     const handleFinish = async () => {
         if (!selectedSupervisor) { Alert.alert('Supervisor Required', 'Please select the supervisor who checked the final inspection.'); return; }
         if (isSubmitting) return;
@@ -159,34 +172,53 @@ export default function SummaryPage({ navigation }) {
                     let formattedMarkObject = null;
                     const firstValidMark = normalizedMarksFromContext.find( mark => mark && typeof mark.nx === 'number' && typeof mark.ny === 'number' );
                     if (firstValidMark) { formattedMarkObject = { x: firstValidMark.nx, y: firstValidMark.ny, image_id: imageId }; }
+
+                    // --- MODIFIED: Payload NOW INCLUDES severity ---
                     const defectPayload = {
-                        category: item.defectDetails.category || 'N/A', type: item.defectDetails.type || 'N/A',
-                        location: locationFromContext.toLowerCase(), mark: formattedMarkObject, remarks: item.defectDetails.remarks || '',
-                        repaired: false,
+                        category: item.defectDetails.category || 'N/A',
+                        type: item.defectDetails.type || 'N/A',
+                        // --- THIS LINE IS NOW ADDED BACK ---
+                        severity: item.defectDetails.severity || 'N/A', // Provide a valid value ('Major'/'Minor' or a default if needed)
+                        // --- END ADDITION ---
+                        location: locationFromContext.toLowerCase(), // Check API spec for casing
+                        mark: formattedMarkObject,
+                        remarks: item.defectDetails.remarks || '',
+                        repaired: false, // Initial submission default
                     };
+                    // --- END MODIFICATION ---
+
+                    // --- Important Check ---
+                    if (!defectPayload.severity || defectPayload.severity === 'N/A') {
+                        console.warn(`Defect item '${item.name}' is missing severity or has 'N/A'. Ensure a valid value ('Major'/'Minor') is always saved in DefectInfoModal.`);
+                    }
+                    // --- End Check ---
+
                     itemDefects.push(defectPayload);
                  }
                  const formattedItem = { section: index + 1, name: item.name, pass: !!item.checked, defect: itemDefects, };
                  requestBody.items.push(formattedItem);
             });
         });
-        console.log('--- Submitting Checklist Payload (Matching API Spec) ---'); console.log(JSON.stringify(requestBody, null, 2)); console.log('--- End Payload ---');
+        console.log('--- Submitting Checklist Payload (WITH Severity) ---'); // Log message updated
+        console.log(JSON.stringify(requestBody, null, 2));
+        console.log('--- End Payload ---');
         try {
             const currentToken = await AsyncStorage.getItem('authToken'); if (!currentToken) throw new Error("Authentication token missing.");
             const response = await fetch(JOBCARD_SUBMIT_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', Authorization: `Bearer ${currentToken}` }, body: JSON.stringify(requestBody), });
             if (!response.ok) {
                  let errorMsg = `Submit Failed (${response.status})`; let errorData = null;
                  try { errorData = await response.json(); errorMsg = errorData?.message || errorData?.error || JSON.stringify(errorData) || errorMsg; console.error("Server Error (JSON):", errorData); } catch (e) { try { const textError = await response.text(); errorMsg = textError || errorMsg; console.error("Server Error (Non-JSON):", textError); } catch (textE) { console.error("Failed to read error response body:", textE) } }
-                 throw new Error(errorMsg);
+                 console.error("Submission failed with message:", errorMsg);
+                 throw new Error(errorMsg); // Throw the specific error message
             }
             const result = await response.json(); console.log('Submission success:', result);
             setModalVisible(true);
         } catch (error) { console.error('Submission error:', error); Alert.alert('Submission Failed', error.message || 'An unexpected error occurred.'); } finally { setIsSubmitting(false); }
     };
-    // --- End Original handleFinish Function ---
+    // --- End handleFinish Function ---
 
 
-    // --- Original Render Component Structure ---
+    // --- Render Component Structure ---
     return (
         <ScreenWrapper
             showHeader={true}
@@ -195,14 +227,14 @@ export default function SummaryPage({ navigation }) {
             enableKeyboardAvoidingView={Platform.OS === 'ios'}
         >
             <ScrollView
-                style={originalStyles.scrollView} // Apply original style name
-                contentContainerStyle={originalStyles.scrollContentContainer} // Apply original style name
+                style={originalStyles.scrollView}
+                contentContainerStyle={originalStyles.scrollContentContainer}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* Use commonStyles for page header BUT KEEP original text */}
+                {/* Header */}
                 <Text style={[commonStyles.pageHeader, { marginBottom: MARGIN.small }]}>PDI Summary</Text>
 
-                {/* Car Info - Apply original themed style name */}
+                {/* Car Info */}
                 <View style={themedStyles.infoBox}>
                      <Text style={themedStyles.carInfoText}><Text style={themedStyles.carInfoLabel}>Chassis:</Text> {carInfo?.chassis_no || 'N/A'}</Text>
                      <Text style={themedStyles.carInfoText}><Text style={themedStyles.carInfoLabel}>Model:</Text> {carInfo?.model || 'N/A'}</Text>
@@ -211,7 +243,7 @@ export default function SummaryPage({ navigation }) {
                      <Text style={themedStyles.carInfoText}><Text style={themedStyles.carInfoLabel}>Entry:</Text> {carInfo?.entry_date || 'N/A'}</Text>
                 </View>
 
-                {/* --- Supervisor Picker Section - Apply original style names --- */}
+                {/* Supervisor Picker */}
                 <Text style={originalStyles.label}>Final Inspection By:</Text>
                 <View style={[originalStyles.pickerContainer, (isLoadingSupervisors || !!supervisorFetchError || supervisors.length === 0) && themedStyles.pickerContainerDisabled]}>
                      {isLoadingSupervisors ? (
@@ -224,7 +256,7 @@ export default function SummaryPage({ navigation }) {
                         <Picker
                             selectedValue={selectedSupervisor}
                             onValueChange={(itemValue) => setSelectedSupervisor(itemValue)}
-                            style={originalStyles.picker} // Apply original style name
+                            style={originalStyles.picker}
                             enabled={!isSubmitting && supervisors.length > 0}
                             mode="dropdown"
                             prompt="Select Supervisor"
@@ -236,9 +268,8 @@ export default function SummaryPage({ navigation }) {
                         </Picker>
                     )}
                 </View>
-                {/* --- End Supervisor Picker Section --- */}
 
-                {/* Checked & Defect Summary - Apply original style names */}
+                {/* Checked & Defect Summary */}
                 <Text style={originalStyles.label}>Checked and Defect Summary:</Text>
                 <View style={originalStyles.summaryContainerView}>
                     {summary.map(({ section, checkedCount, defectCount }, index) => (
@@ -250,11 +281,11 @@ export default function SummaryPage({ navigation }) {
                     ))}
                 </View>
 
-                {/* View Image Button - Apply original style names */}
+                {/* View Image Button */}
                 {defectSummary.length > 0 && (
                     <View style={originalStyles.viewCenter}>
                         <TouchableOpacity
-                            style={originalStyles.viewImageButton} 
+                            style={originalStyles.viewImageButton}
                             onPress={() => { setSelectedImageKeyForModal(imageKeys[0]); setSummaryImageLayout(null); setImageModalVisible(true); }}
                         >
                              <Text style={originalStyles.viewImageText}>View Defect Locations</Text>
@@ -262,15 +293,19 @@ export default function SummaryPage({ navigation }) {
                     </View>
                 )}
 
-                {/* Defects Summary List - Apply original style names */}
+                {/* Defects Summary List */}
                 {defectSummary.length > 0 && (
                     <>
                         <Text style={originalStyles.label}>Defects Summary:</Text>
                         <View style={originalStyles.defectContainerView}>
                             {defectSummary.map((defect, index) => (
-                                <View key={index} style={originalStyles.defectBox}>
+                                // Added key for list rendering
+                                <View key={`${defect.section}-${defect.name}-${index}`} style={originalStyles.defectBox}>
                                     <Text style={originalStyles.defectItem}><Text style={originalStyles.boldText}>Section {defect.section} - {defect.name}</Text></Text>
                                     <Text style={originalStyles.defectDetail}>{defect.category} - {defect.type}</Text>
+                                    {/* --- Display Severity using existing style --- */}
+                                    <Text style={originalStyles.defectDetail}>Severity: {defect.severity}</Text>
+                                    {/* --- End Display --- */}
                                     <Text style={originalStyles.defectDetail}>Location: {defect.location}</Text>
                                     <Text style={originalStyles.remarksText}>Remarks: {defect.remarks}</Text>
                                     {defect.selectedImage && defect.marks && defect.marks.length > 0 && (
@@ -281,12 +316,12 @@ export default function SummaryPage({ navigation }) {
                         </View>
                     </>
                 )}
-                 <View style={{ height: MARGIN.large }} />
+                 <View style={{ height: MARGIN.large }} />{/* Scroll bottom padding */}
             </ScrollView>
             {/* --- End Scrollable Content Area --- */}
 
 
-            {/* --- Fixed Footer Buttons - Apply original style names --- */}
+            {/* --- Fixed Footer Buttons (Original) --- */}
             <View style={originalStyles.footer}>
                 <TouchableOpacity
                     style={[originalStyles.buttonBack, isSubmitting && originalStyles.buttonDisabled]}
@@ -303,7 +338,7 @@ export default function SummaryPage({ navigation }) {
                     disabled={ !selectedSupervisor || isSubmitting || isLoadingSupervisors || !!supervisorFetchError || supervisors.length === 0 }
                 >
                     {isSubmitting ? (
-                        <ActivityIndicator size="small" color={COLORS.black} />
+                        <ActivityIndicator size="small" color={COLORS.black} /> // Color adjusted for visibility on primaryLight bg
                     ) : (
                         <Text style={[ originalStyles.buttonText,
                                      ( !selectedSupervisor || isLoadingSupervisors || !!supervisorFetchError || supervisors.length === 0)
@@ -316,7 +351,7 @@ export default function SummaryPage({ navigation }) {
             {/* --- End Fixed Footer Buttons --- */}
 
 
-            {/* --- Modals - Apply original style names --- */}
+            {/* --- Modals (Original) --- */}
             {/* Image Modal */}
             <Modal
                 visible={imageModalVisible}
@@ -339,7 +374,7 @@ export default function SummaryPage({ navigation }) {
                     <View style={originalStyles.imageWrapper}>
                         <Image
                             key={currentImageKey} source={getImageSource(currentImageKey)}
-                            style={originalStyles.image} // Apply original style name
+                            style={originalStyles.image}
                             onLayout={onSummaryImageLayout} resizeMode="contain"
                         />
                         {!summaryImageLayout && (
@@ -361,7 +396,7 @@ export default function SummaryPage({ navigation }) {
                 </View>
             </Modal>
 
-            {/* Success Modal - Apply original themed style names */}
+            {/* Success Modal */}
             <Modal
                 visible={modalVisible}
                 transparent animationType="fade"
@@ -387,253 +422,50 @@ export default function SummaryPage({ navigation }) {
 }
 
 
-// --- ORIGINAL Styles (MODIFIED to use constants from commonStyles) ---
+// --- Styles (Original - Unchanged) ---
 const originalStyles = StyleSheet.create({
-    scrollView: {
-        flex: 1,
-        backgroundColor: 'transparent',
-    },
-    scrollContentContainer: {
-        paddingHorizontal: PADDING.medium,
-        paddingTop: PADDING.small,
-        paddingBottom: PADDING.large,
-    },
-    label: {
-        fontSize: FONT_SIZES.xlarge,
-        fontWeight: 'bold',
-        color: COLORS.secondary,
-        marginBottom: MARGIN.medium,
-    },
-    pickerContainer: {
-        borderWidth: 1,
-        borderColor: COLORS.lightGrey,
-        borderRadius: 5,
-        backgroundColor: COLORS.white,
-        marginBottom: MARGIN.medium,
-        minHeight: 50,
-        justifyContent: 'center',
-    },
-    picker: {
-        marginVertical: 0,
-        height: 50,
-        width: '100%',
-        color: COLORS.secondary,
-    },
-    summaryContainerView: {
-        marginVertical: MARGIN.large,
-    },
-    summaryRow: {
-        flexDirection: 'row',
-        paddingVertical: PADDING.small,
-        paddingHorizontal: PADDING.xsmall,
-        backgroundColor: COLORS.veryLightGrey,
-        marginBottom: MARGIN.xsmall,
-        borderRadius: 5,
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.divider,
-        alignItems: 'center',
-    },
-    summaryColumnSection: {
-        width: '50%',
-        paddingRight: PADDING.xsmall,
-    },
-    summaryColumnCount: {
-        width: '25%',
-        paddingHorizontal: PADDING.xsmall,
-        alignItems: 'center',
-    },
-    summaryText: {
-        fontWeight: 'bold',
-        color: COLORS.secondary,
-        fontSize: FONT_SIZES.medium,
-    },
-    checkedText: {
-        color: COLORS.success,
-        fontSize: FONT_SIZES.medium,
-        textAlign: 'center',
-    },
-    defectText: {
-        color: COLORS.danger,
-        fontSize: FONT_SIZES.medium,
-        textAlign: 'center',
-    },
-    viewCenter: {
-        alignItems: 'center',
-        marginVertical: MARGIN.medium,
-    },
-    viewImageButton: {
-        backgroundColor: COLORS.primary,
-        paddingVertical: PADDING.small,
-        paddingHorizontal: PADDING.large,
-        borderRadius: 5,
-        alignItems: 'center',
-        width: 'auto',
-    },
-    viewImageText: {
-        color: COLORS.white,
-        fontWeight: 'bold',
-        fontSize: FONT_SIZES.medium,
-    },
-    defectContainerView: {
-        marginVertical: MARGIN.small,
-    },
-    defectBox: {
-        backgroundColor: COLORS.redinfo,
-        padding: PADDING.medium,
-        borderRadius: 5,
-        marginBottom: MARGIN.small,
-        borderWidth: 1,
-        borderColor: COLORS.danger,
-    },
-    defectItem: {
-        fontSize: FONT_SIZES.medium,
-        fontWeight: 'bold',
-        color: COLORS.secondary,
-        marginBottom: MARGIN.xsmall,
-    },
-    defectDetail: {
-        fontSize: FONT_SIZES.small,
-        color: COLORS.danger,
-        marginBottom: MARGIN.xsmall,
-    },
-    remarksText: {
-        fontSize: FONT_SIZES.small,
-        fontStyle: 'italic',
-        color: COLORS.grey,
-    },
-    boldText: {
-        fontWeight: 'bold',
-    },
-    modalContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        padding: PADDING.large,
-    },
-    modalHeader: {
-        fontSize: FONT_SIZES.large,
-        fontWeight: 'bold',
-        color: COLORS.white,
-        marginBottom: MARGIN.medium,
-    },
-    imageSelector: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        width: '90%',
-        marginBottom: MARGIN.medium,
-        alignItems: 'center',
-        paddingHorizontal: PADDING.small,
-    },
-    imageButton: {
-        backgroundColor: COLORS.primaryLight,
-        paddingVertical: PADDING.medium,
-        paddingHorizontal: PADDING.large,
-        borderRadius: 5,
-    },
-    imageButtonText: {
-        fontWeight: 'bold',
-        color: COLORS.secondary,
-        fontSize: FONT_SIZES.medium,
-    },
-    imageWrapper: {
-        position: 'relative',
-        borderColor: COLORS.grey,
-        borderWidth: 1,
-        marginVertical: MARGIN.medium,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: COLORS.white,
-    },
-    image: {
-        width: OLD_MARK_MODAL_IMAGE_WIDTH,
-        height: OLD_MARK_MODAL_IMAGE_HEIGHT,
-        resizeMode: 'contain',
-    },
-    markerContainer: {
-        position: 'absolute',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: MARKER_SIZE,
-        height: MARKER_SIZE,
-    },
-    xMark: { // The 'X' marker
-        fontSize: FONT_SIZES.large,
-        fontWeight: 'bold',
-        color: COLORS.danger,
-    },
-    circle: { // The circle marker
-        width: 20, height: 20,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: COLORS.black,
-        position: 'absolute',
-    },
-    closeButton: { // Modal close button
-        marginTop: MARGIN.large,
-        backgroundColor: COLORS.danger,
-        paddingVertical: PADDING.medium,
-        paddingHorizontal: PADDING.large,
-        borderRadius: 5,
-    },
-    closeText: {
-        fontWeight: 'bold',
-        color: COLORS.white,
-        fontSize: FONT_SIZES.medium,
-    },
-    footer: { // Footer container for buttons
-        flexDirection: 'row',
-        justifyContent: 'space-evenly',
-        paddingTop: PADDING.small,
-        paddingBottom: Platform.OS === 'ios' ? PADDING.large : PADDING.small,
-        paddingHorizontal: PADDING.large,
-        borderTopWidth: 1,
-        borderTopColor: 'transparent',
-        backgroundColor: COLORS.footer, 
-    },
-    button: { // Finish button base style
-        backgroundColor: COLORS.primaryLight,
-        paddingHorizontal: PADDING.buttonHorizontalOriginal,
-        paddingVertical: PADDING.large,
-        borderRadius: 5,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    buttonBack: { // Back button base style
-        backgroundColor: COLORS.veryLightGrey,
-        paddingHorizontal: PADDING.buttonHorizontalOriginal,
-        paddingVertical: PADDING.large,
-        borderRadius: 5,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    buttonText: { // Base text for buttons
-        fontSize: FONT_SIZES.xlarge,
-        fontWeight: 'bold',
-        color: COLORS.secondary, 
-    },
-    buttonBackText: { 
-        color: COLORS.secondary,
-    },
-    buttonDisabled: { // Disabled state for ANY button
-        backgroundColor: COLORS.disabled,
-        opacity: 0.7,
-    },
-    buttonTextDisabled: { // Disabled text style for ANY button
-        color: COLORS.grey,
-    },
-    loadingOverlay: { // Loading overlay in modal
-        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 10,
-    },
-    loadingText: { // Text with loading indicator in modal
-        marginTop: MARGIN.small,
-        color: COLORS.white,
-        fontSize: FONT_SIZES.small,
-    },
+    scrollView: { flex: 1, backgroundColor: 'transparent', },
+    scrollContentContainer: { paddingHorizontal: PADDING.medium, paddingTop: PADDING.small, paddingBottom: PADDING.large, },
+    label: { fontSize: FONT_SIZES.xlarge, fontWeight: 'bold', color: COLORS.secondary, marginBottom: MARGIN.medium, },
+    pickerContainer: { borderWidth: 1, borderColor: COLORS.lightGrey, borderRadius: 5, backgroundColor: COLORS.white, marginBottom: MARGIN.medium, minHeight: 50, justifyContent: 'center', },
+    picker: { marginVertical: 0, height: 50, width: '100%', color: COLORS.secondary, },
+    summaryContainerView: { marginVertical: MARGIN.large, },
+    summaryRow: { flexDirection: 'row', paddingVertical: PADDING.small, paddingHorizontal: PADDING.xsmall, backgroundColor: COLORS.veryLightGrey, marginBottom: MARGIN.xsmall, borderRadius: 5, borderBottomWidth: 1, borderBottomColor: COLORS.divider, alignItems: 'center', },
+    summaryColumnSection: { width: '50%', paddingRight: PADDING.xsmall, },
+    summaryColumnCount: { width: '25%', paddingHorizontal: PADDING.xsmall, alignItems: 'center', },
+    summaryText: { fontWeight: 'bold', color: COLORS.secondary, fontSize: FONT_SIZES.medium, },
+    checkedText: { color: COLORS.success, fontSize: FONT_SIZES.medium, textAlign: 'center', },
+    defectText: { color: COLORS.danger, fontSize: FONT_SIZES.medium, textAlign: 'center', },
+    viewCenter: { alignItems: 'center', marginVertical: MARGIN.medium, },
+    viewImageButton: { backgroundColor: COLORS.primary, paddingVertical: PADDING.small, paddingHorizontal: PADDING.large, borderRadius: 5, alignItems: 'center', width: 'auto', },
+    viewImageText: { color: COLORS.white, fontWeight: 'bold', fontSize: FONT_SIZES.medium, },
+    defectContainerView: { marginVertical: MARGIN.small, },
+    defectBox: { backgroundColor: COLORS.redinfo, padding: PADDING.medium, borderRadius: 5, marginBottom: MARGIN.small, borderWidth: 1, borderColor: COLORS.danger, },
+    defectItem: { fontSize: FONT_SIZES.medium, fontWeight: 'bold', color: COLORS.secondary, marginBottom: MARGIN.xsmall, },
+    defectDetail: { fontSize: FONT_SIZES.small, color: COLORS.danger, marginBottom: MARGIN.xsmall, }, // Reusing this style for severity display
+    remarksText: { fontSize: FONT_SIZES.small, fontStyle: 'italic', color: COLORS.grey, },
+    boldText: { fontWeight: 'bold', },
+    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)', padding: PADDING.large, },
+    modalHeader: { fontSize: FONT_SIZES.large, fontWeight: 'bold', color: COLORS.white, marginBottom: MARGIN.medium, },
+    imageSelector: { flexDirection: 'row', justifyContent: 'space-around', width: '90%', marginBottom: MARGIN.medium, alignItems: 'center', paddingHorizontal: PADDING.small, },
+    imageButton: { backgroundColor: COLORS.primaryLight, paddingVertical: PADDING.medium, paddingHorizontal: PADDING.large, borderRadius: 5, },
+    imageButtonText: { fontWeight: 'bold', color: COLORS.secondary, fontSize: FONT_SIZES.medium, },
+    imageWrapper: { position: 'relative', borderColor: COLORS.grey, borderWidth: 1, marginVertical: MARGIN.medium, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.white, width: OLD_MARK_MODAL_IMAGE_WIDTH, height: OLD_MARK_MODAL_IMAGE_HEIGHT, },
+    image: { width: OLD_MARK_MODAL_IMAGE_WIDTH, height: OLD_MARK_MODAL_IMAGE_HEIGHT, resizeMode: 'contain', },
+    markerContainer: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: MARKER_SIZE, height: MARKER_SIZE, },
+    xMark: { fontSize: FONT_SIZES.large, fontWeight: 'bold', color: COLORS.danger, },
+    circle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: COLORS.black, position: 'absolute', },
+    closeButton: { marginTop: MARGIN.large, backgroundColor: COLORS.danger, paddingVertical: PADDING.medium, paddingHorizontal: PADDING.large, borderRadius: 5, },
+    closeText: { fontWeight: 'bold', color: COLORS.white, fontSize: FONT_SIZES.medium, },
+    footer: { flexDirection: 'row', justifyContent: 'space-evenly', paddingTop: PADDING.small, paddingBottom: Platform.OS === 'ios' ? PADDING.large : PADDING.small, paddingHorizontal: PADDING.large, borderTopWidth: 1, borderTopColor: 'transparent', backgroundColor: COLORS.footer, },
+    button: { backgroundColor: COLORS.primaryLight, paddingHorizontal: PADDING.buttonHorizontalOriginal, paddingVertical: PADDING.large, borderRadius: 5, alignItems: 'center', justifyContent: 'center', flex: 0.45, },
+    buttonBack: { backgroundColor: COLORS.veryLightGrey, paddingHorizontal: PADDING.buttonHorizontalOriginal, paddingVertical: PADDING.large, borderRadius: 5, alignItems: 'center', justifyContent: 'center', flex: 0.45, },
+    buttonText: { fontSize: FONT_SIZES.xlarge, fontWeight: 'bold', color: COLORS.secondary, },
+    buttonBackText: { color: COLORS.secondary, },
+    buttonDisabled: { backgroundColor: COLORS.disabled, opacity: 0.7, },
+    buttonTextDisabled: { color: COLORS.grey, },
+    loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10, },
+    loadingText: { marginTop: MARGIN.small, color: COLORS.white, fontSize: FONT_SIZES.small, },
 });
 
 const themedStyles = StyleSheet.create({
@@ -646,50 +478,14 @@ const themedStyles = StyleSheet.create({
     successModalText: { fontSize: FONT_SIZES.medium, marginBottom: MARGIN.medium, color: COLORS.secondary, textAlign: 'center', },
     successModalTimeText: { fontSize: FONT_SIZES.medium, marginBottom: MARGIN.small, color: COLORS.grey, },
     successModalButton: { marginTop: MARGIN.medium, width: '80%', paddingVertical: PADDING.medium, },
- 
-    pickerContainerDisabled: {
-        backgroundColor: COLORS.veryLightGrey,
-        borderColor: COLORS.lightGrey,
-    },
-    loadingOverlay: { // Copied from localStyles in RectifySummaryPage for consistency
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 50,
-    },
-    loadingText: { // Copied from localStyles in RectifySummaryPage
-        marginLeft: MARGIN.small,
-        color: COLORS.grey,
-        fontSize: FONT_SIZES.medium,
-    },
-    pickerPlaceholder: { // Copied from localStyles in RectifySummaryPage
-        fontSize: FONT_SIZES.medium,
-        color: COLORS.grey,
-        textAlign: 'left',
-        paddingVertical: PADDING.medium,
-        paddingHorizontal: PADDING.medium,
-    },
-    pickerPlaceholderItem: { // Copied from localStyles in RectifySummaryPage
-        color: COLORS.grey,
-        fontSize: FONT_SIZES.medium,
-    },
-    pickerItem: { // Basic style for actual items
-        fontSize: FONT_SIZES.medium,
-        color: COLORS.secondary,
-    },
-     summaryHeaderRow: {
-         backgroundColor: COLORS.lightGrey,
-         borderTopWidth: 0,
-         borderBottomWidth: 1,
-         borderBottomColor: COLORS.lightGrey,
-     },
-     summaryHeaderText: {
-         fontWeight: 'bold',
-         color: COLORS.secondary,
-         textAlign: 'center',
-         fontSize: FONT_SIZES.medium,
-     },
-      firstSummaryRow: {
-       borderTopWidth: 0,
-     },
+    pickerContainerDisabled: { backgroundColor: COLORS.veryLightGrey, borderColor: COLORS.lightGrey, },
+    loadingOverlay: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 50, },
+    loadingText: { marginLeft: MARGIN.small, color: COLORS.grey, fontSize: FONT_SIZES.medium, },
+    pickerPlaceholder: { fontSize: FONT_SIZES.medium, color: COLORS.grey, textAlign: 'left', paddingVertical: PADDING.medium, paddingHorizontal: PADDING.medium, },
+    pickerPlaceholderItem: { color: COLORS.grey, fontSize: FONT_SIZES.medium, },
+    pickerItem: { fontSize: FONT_SIZES.medium, color: COLORS.secondary, },
+     summaryHeaderRow: { backgroundColor: COLORS.lightGrey, borderTopWidth: 0, borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey, },
+     summaryHeaderText: { fontWeight: 'bold', color: COLORS.secondary, textAlign: 'center', fontSize: FONT_SIZES.medium, },
+      firstSummaryRow: { borderTopWidth: 0, },
 });
+// --- End Styles ---

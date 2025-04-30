@@ -5,7 +5,7 @@ import {
     StyleSheet, Alert, KeyboardAvoidingView, Platform
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import Icon from 'react-native-vector-icons/FontAwesome'; // Using FontAwesome
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 // Import theme constants and common styles
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
@@ -15,25 +15,31 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
     const [staffNo, setStaffNo] = useState('');
     const [date, setDate] = useState(new Date());
     const [showPicker, setShowPicker] = useState(false);
-    const [remark, setRemark] = useState('');
+    const [remark, setRemark] = useState(''); // Remark state
 
     useEffect(() => {
-        // Reset form when modal becomes visible or item changes
         if (visible) {
             setStaffName('');
             setStaffNo('');
             setDate(new Date());
-            setRemark('');
+            setRemark(''); // Reset remark as well
             setShowPicker(false);
         }
-    }, [visible]); // Only depend on visibility to reset
+    }, [visible]);
+
+    // --- MODIFICATION START ---
+    // Determine if the form is valid for confirmation (include remark)
+    const isFormValid = staffName.trim() && staffNo.trim() && remark.trim();
+    // --- MODIFICATION END ---
 
     const handleConfirmPress = () => {
-        if (!staffName.trim() || !staffNo.trim()) {
-            Alert.alert("Missing Information", "Please enter Staff Name and Staff No.");
+        if (!isFormValid) {
+            // --- MODIFICATION START ---
+            // Update alert message to include remark
+            Alert.alert("Missing Information", "Please enter Staff Name, Staff No, and Remark.");
+            // --- MODIFICATION END ---
             return;
         }
-        // Pass data to the onConfirm prop received from parent
         onConfirm(staffName.trim(), staffNo.trim(), remark.trim(), date.toISOString());
     };
 
@@ -44,18 +50,16 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
 
     const onDateChange = (event, selectedDate) => {
         const currentDate = selectedDate || date;
-        setShowPicker(false); // Hide picker after interaction on both platforms
+        setShowPicker(false);
         if (event.type === 'set') {
              setDate(currentDate);
         }
     };
 
-    // Render nothing if not visible or no item
     if (!visible || !item) {
         return null;
     }
 
-    // Extract defect info safely
     const defectInfo = item.allDefects?.[0];
 
     return (
@@ -67,50 +71,49 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
         >
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
-                style={styles.rectifyModalOverlay} // Uses themed background color
+                style={styles.rectifyModalOverlay}
             >
                 <View style={styles.rectifyModalContent}>
                     <Text style={styles.rectifyModalHeader}>Rectification Information</Text>
 
-                    {/* Defect Info */}
+                    {/* Defect Info (Keep as is) */}
                     <View style={styles.defectInfoSection}>
                        <Text style={styles.defectInfoLabel}>Defect:</Text>
-                       {/* Display item section and name */}
                        <Text style={styles.defectInfoText}> {(item.section ? `${getSectionLetter(item.section)} - ` : '') + item.name} </Text>
-                       {/* Display defect category and type if available */}
                        {defectInfo && (
                             <>
                                <Text style={styles.defectInfoText}>Category: {defectInfo.category || 'N/A'}</Text>
                                <Text style={styles.defectInfoText}>Type: {defectInfo.type || 'N/A'}</Text>
+                               <Text style={styles.defectInfoText}>Severity: {defectInfo.severity || 'N/A'}</Text>
                             </>
                        )}
                     </View>
 
-                    {/* Staff Name Input */}
+                    {/* Staff Name Input (Keep as is) */}
                     <Text style={styles.inputLabel}>Staff Name:</Text>
                     <TextInput
-                        style={styles.input} // Uses themed input style
+                        style={styles.input}
                         placeholder="Enter Staff Name"
-                        placeholderTextColor={COLORS.lightGrey} // Added for consistency
+                        placeholderTextColor={COLORS.lightGrey}
                         value={staffName}
                         onChangeText={setStaffName}
                         autoCapitalize="words"
                     />
 
-                    {/* Staff No Input */}
+                    {/* Staff No Input (Keep as is) */}
                     <Text style={styles.inputLabel}>Staff No:</Text>
                     <TextInput
-                        style={styles.input} // Uses themed input style
+                        style={styles.input}
                         placeholder="Enter Staff No"
-                        placeholderTextColor={COLORS.lightGrey} // Added for consistency
+                        placeholderTextColor={COLORS.lightGrey}
                         value={staffNo}
                         onChangeText={setStaffNo}
                      />
 
-                    {/* Date Section */}
+                    {/* Date Section (Keep as is) */}
                     <Text style={styles.inputLabel}>Rectification Date:</Text>
                     <TouchableOpacity
-                        style={styles.datePickerButton} // Style resembles input but is touchable
+                        style={styles.datePickerButton}
                         onPress={() => setShowPicker(true)}
                     >
                         <Icon name="calendar" size={20} color={COLORS.primary} style={styles.calendarIcon} />
@@ -119,19 +122,21 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
                         </Text>
                     </TouchableOpacity>
 
-                    {/* Remark Input */}
-                    <Text style={styles.inputLabel}>Remark (Optional):</Text>
+                    {/* Remark Input (Keep as is - but now required) */}
+                    {/* --- MODIFICATION START --- */}
+                    <Text style={styles.inputLabel}>Remark:</Text>
+                    {/* --- MODIFICATION END --- */}
                     <TextInput
-                        style={[styles.input, styles.remarkInput]} // Based on themed input, adds multiline props
-                        placeholder="Enter any remarks"
-                        placeholderTextColor={COLORS.lightGrey} // Added for consistency
+                        style={[styles.input, styles.remarkInput]}
+                        placeholder="Enter remarks" // Changed placeholder slightly
+                        placeholderTextColor={COLORS.lightGrey}
                         value={remark}
                         onChangeText={setRemark}
                         multiline={true}
-                        numberOfLines={3} // Suggestion, might not be strictly enforced visually
+                        numberOfLines={3}
                     />
 
-                    {/* Conditionally render the DateTimePicker */}
+                    {/* DateTimePicker (Keep as is) */}
                     {showPicker && (
                         <DateTimePicker
                             testID="dateTimePicker"
@@ -139,9 +144,7 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
                             mode="date"
                             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
                             onChange={onDateChange}
-                            maximumDate={new Date()} // Keep max date logic
-                             // Apply theme color if possible (might depend on picker implementation)
-                            // accentColor={COLORS.primary} // This prop might not exist or work universally
+                            maximumDate={new Date()}
                         />
                     )}
 
@@ -150,9 +153,26 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
                         <TouchableOpacity style={[styles.modalButtonBase, styles.cancelButton]} onPress={onClose}>
                             <Text style={[styles.modalButtonTextBase, styles.cancelButtonText]}>Cancel</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={[styles.modalButtonBase, styles.confirmButton]} onPress={handleConfirmPress}>
-                            <Text style={[styles.modalButtonTextBase, styles.confirmButtonText]}>Confirm</Text>
+
+                        {/* --- MODIFICATION START --- */}
+                        <TouchableOpacity
+                            style={[
+                                styles.modalButtonBase, // Base styles (padding, radius etc.)
+                                // Apply background color conditionally
+                                { backgroundColor: isFormValid ? COLORS.primary : COLORS.disabled }
+                            ]}
+                            onPress={handleConfirmPress}
+                            disabled={!isFormValid} // Functional disable toggle
+                        >
+                            <Text style={[
+                                styles.modalButtonTextBase, // Base text styles (font, weight etc.)
+                                // Apply text color conditionally
+                                { color: isFormValid ? COLORS.white : COLORS.grey }
+                            ]}>
+                                Confirm
+                            </Text>
                         </TouchableOpacity>
+                        {/* --- MODIFICATION END --- */}
                     </View>
                 </View>
             </KeyboardAvoidingView>
@@ -160,20 +180,20 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
     );
 };
 
-// --- Styles for RectifyInfoModal using Theme ---
+// --- Styles (Keep As Is - definitions for confirmButton/confirmButtonText are now unused but harmless) ---
 const styles = StyleSheet.create({
     rectifyModalOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.6)', // Using black with opacity for overlay
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: PADDING.large, // Use theme padding
+        padding: PADDING.large,
     },
     rectifyModalContent: {
         backgroundColor: COLORS.white,
-        borderRadius: 10, // Consistent moderate rounding
-        padding: PADDING.large, // Use theme padding
-        width: '95%', // Slightly wider for smaller screens
+        borderRadius: 10,
+        padding: PADDING.large,
+        width: '95%',
         maxWidth: 500,
         shadowColor: COLORS.black,
         shadowOffset: { width: 0, height: 2 },
@@ -189,8 +209,8 @@ const styles = StyleSheet.create({
         color: COLORS.secondary,
     },
     defectInfoSection: {
-        marginBottom: MARGIN.medium, 
-        padding: PADDING.medium,    
+        marginBottom: MARGIN.medium,
+        padding: PADDING.medium,
         backgroundColor: COLORS.redinfo,
         borderRadius: 8,
     },
@@ -201,50 +221,50 @@ const styles = StyleSheet.create({
         marginBottom: MARGIN.xsmall,
     },
     defectInfoText: {
-        fontSize: FONT_SIZES.medium, 
-        marginBottom: MARGIN.xsmall, 
-        color: COLORS.secondary, 
+        fontSize: FONT_SIZES.medium,
+        marginBottom: MARGIN.xsmall,
+        color: COLORS.secondary,
     },
     inputLabel: {
         fontSize: FONT_SIZES.medium,
-        fontWeight: '600', 
+        fontWeight: '600',
         color: COLORS.secondary,
         marginBottom: MARGIN.small,
-        marginTop: MARGIN.small, 
+        marginTop: MARGIN.small,
     },
     input: {
-        ...commonStyles.textInput, 
+        ...commonStyles.textInput,
     },
     remarkInput: {
-        height: 90, 
+        height: 90,
         textAlignVertical: 'top',
-        paddingTop: PADDING.small, 
+        paddingTop: PADDING.small,
     },
     datePickerButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        height: 48, 
-        borderColor: COLORS.lightGrey, 
-        borderWidth: 1, 
-        borderRadius: 8, 
-        marginBottom: MARGIN.medium, 
-        paddingHorizontal: PADDING.medium, 
-        backgroundColor: COLORS.white, 
+        height: 48,
+        borderColor: COLORS.lightGrey,
+        borderWidth: 1,
+        borderRadius: 8,
+        marginBottom: MARGIN.medium,
+        paddingHorizontal: PADDING.medium,
+        backgroundColor: COLORS.white,
     },
     calendarIcon: {
         marginRight: MARGIN.small,
     },
     datePickerButtonText: {
         fontSize: FONT_SIZES.medium,
-        color: COLORS.secondary, 
+        color: COLORS.secondary,
     },
     rectifyModalButtons: {
         flexDirection: 'row',
         justifyContent: 'space-evenly',
-        marginTop: MARGIN.large, 
+        marginTop: MARGIN.large,
     },
-    modalButtonBase: {
-        borderRadius: 8, 
+    modalButtonBase: { // Base styles - applied always
+        borderRadius: 8,
         paddingVertical: PADDING.small,
         paddingHorizontal: PADDING.large,
         minWidth: 100,
@@ -252,14 +272,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     cancelButton: {
-        backgroundColor: COLORS.veryLightGrey, 
+        backgroundColor: COLORS.veryLightGrey,
         borderWidth: 1,
         borderColor: COLORS.border,
     },
-    confirmButton: {
-        backgroundColor: COLORS.primary, 
-    },
-    modalButtonTextBase: {
+    // confirmButton style object is no longer explicitly used here, color is set inline
+    // confirmButton: { backgroundColor: COLORS.primary },
+    modalButtonTextBase: { // Base styles - applied always
         fontSize: FONT_SIZES.medium,
         fontWeight: 'bold',
         textAlign: 'center',
@@ -267,17 +286,16 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         color: COLORS.grey,
     },
-    confirmButtonText: {
-        color: COLORS.white,
-    },
+    // confirmButtonText style object is no longer explicitly used here, color is set inline
+    // confirmButtonText: { color: COLORS.white },
 });
 
-// Helper function used inside the modal (remains unchanged)
+// Helper function (Keep as is)
 const getSectionLetter = (sectionNumberInput) => {
     const sectionNumber = parseInt(sectionNumberInput, 10);
     const map = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'Others', };
     if (!isNaN(sectionNumber) && map.hasOwnProperty(sectionNumber)) { return map[sectionNumber]; }
-    return sectionNumberInput; // Return original if not mappable
+    return sectionNumberInput;
 };
 
 export default RectifyInfoModal;

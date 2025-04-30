@@ -1,6 +1,9 @@
 // screens/DefectInfoModal.js
 import React, { useState, useContext, useEffect } from 'react';
-import { View, Text, Modal, StyleSheet, TextInput, Alert, TouchableOpacity, FlatList, LayoutAnimation, Platform, UIManager } from 'react-native';
+import {
+    View, Text, Modal, StyleSheet, TextInput, Alert,
+    TouchableOpacity, FlatList, LayoutAnimation, Platform, UIManager
+} from 'react-native';
 import CheckBox from 'react-native-checkbox'; // Ensure this is the checkbox component you intend to use
 import MarkModal from './MarkModal';
 import { ChecklistContext } from '../context/ChecklistContext';
@@ -39,7 +42,8 @@ const CustomDropdown = ({
         return rows;
     };
 
-    const numColumns = 3;
+    // Use 2 columns for Major/Minor for better layout
+    const numColumns = label === 'Severity' ? 2 : 3;
     const formattedOptions = formatRows(options, numColumns);
 
     return (
@@ -51,7 +55,8 @@ const CustomDropdown = ({
             </TouchableOpacity>
             {isOpen && (
                 <FlatList
-                    style={localStyles.dropdownOptionsContainer}
+                    // Adjust style for fewer options if needed
+                    style={[localStyles.dropdownOptionsContainer, label === 'Severity' && { maxHeight: 80 } ]}
                     data={formattedOptions}
                     keyExtractor={(item, index) => item.key || String(index)}
                     renderItem={({ item }) => {
@@ -60,7 +65,7 @@ const CustomDropdown = ({
                         }
                         return (
                             <TouchableOpacity
-                                style={localStyles.option}
+                                style={[localStyles.option, label === 'Severity' && { alignItems: 'center' }]} // Center Severity options
                                 onPress={() => handleOptionPress(item.value)}
                             >
                                 <CheckBox
@@ -85,71 +90,98 @@ export default function DefectInfoModal({ defect, onClose }) {
     const { updateDefectDetails } = useContext(ChecklistContext);
     const { categoryOptions, getTypeOptionsByCategory } = useContext(DefectTypeContext); // Get data/helpers from DefectTypeContext
 
-    // State Initialization (initial values from potentially existing defectDetails)
-    // Note: Using defect.item.defectDetails?.category || '' assumes category is stored as "PAINTING", "MECHANICAL" etc.
+    // --- State Initialization ---
     const [category, setCategory] = useState(defect.item.defectDetails?.category || '');
     const [type, setType] = useState(defect.item.defectDetails?.type || '');
     const [location, setLocation] = useState(defect.item.defectDetails?.location || '');
+    // --- NEW: State for Severity ---
+    const [severity, setSeverity] = useState(defect.item.defectDetails?.severity || '');
+    // --- END NEW ---
     const [remarks, setRemarks] = useState(defect.item.defectDetails?.remarks || '');
     const [marking, setMarking] = useState(false); // State for MarkModal visibility
 
-    // State to control which dropdown is open
-    const [activeDropdown, setActiveDropdown] = useState(category ? 'type' : 'category'); // Open type if category exists, else category
+    // --- State to control which dropdown is open ---
+    const getInitialActiveDropdown = () => {
+        if (!category) return 'category';
+        if (!type) return 'type';
+        if (!location) return 'location';
+        // --- NEW: Check severity ---
+        if (!severity) return 'severity';
+        // --- END NEW ---
+        return 'none'; // If all are filled, open none initially
+    };
+    const [activeDropdown, setActiveDropdown] = useState(getInitialActiveDropdown());
 
-    // --- Remove Hardcoded Data ---
-    // const defectTypes = { ... }; // This is now removed
-
-    // Define location options (remains the same)
+    // --- Options Definitions ---
     const locationOptions = [
         { label: "Exterior", value: "Exterior" },
         { label: "Interior", value: "Interior" },
     ];
+    // --- NEW: Severity Options ---
+    const severityOptions = [
+        { label: "Major", value: "Major" },
+        { label: "Minor", value: "Minor" },
+    ];
+    // --- END NEW ---
 
-    // --- Use Context Helpers ---
-    // Category options are directly from context: `categoryOptions`
-    // Function to get type options based on selected category, using context helper
     const getTypeOptions = () => {
         return getTypeOptionsByCategory(category);
     };
 
-    // --- Handlers (Logic remains similar, data source changes) ---
+    // --- Handlers ---
     const handleCategoryChange = (newCategory) => {
         setCategory(newCategory);
-        setType(''); // Reset type when category changes
+        setType(''); // Reset subsequent fields
+        setLocation('');
+        setSeverity('');
         setActiveDropdown('type'); // Open type dropdown next
     };
 
     const handleTypeChange = (newType) => {
         setType(newType);
+        setLocation(''); // Reset subsequent fields
+        setSeverity('');
         setActiveDropdown('location'); // Open Location dropdown next
     };
 
     const handleLocationChange = (newLocation) => {
         setLocation(newLocation);
-        setActiveDropdown('none'); // Close Location dropdown after selection
+        setSeverity(''); // Reset subsequent fields
+        setActiveDropdown('severity'); // --- MODIFIED: Open Severity dropdown next ---
     };
+
+    // --- NEW: Handler for Severity Change ---
+    const handleSeverityChange = (newSeverity) => {
+        setSeverity(newSeverity);
+        setActiveDropdown('none'); // Close Severity dropdown after selection (or focus remarks)
+    };
+    // --- END NEW ---
 
     const handleDropdownHeaderPress = (dropdownName) => {
         setActiveDropdown(current => (current === dropdownName ? 'none' : dropdownName));
     };
 
     const handleMark = () => {
-        if (!category || !type || !location) {
-            Alert.alert('Missing Information', 'Please select Category, Type, and Location before marking.');
+        // --- MODIFIED: Added severity check ---
+        if (!category || !type || !location || !severity) {
+            Alert.alert('Missing Information', 'Please select Category, Type, Location, and Severity before marking.');
             return;
         }
-        // Use the correct item identifier (ID is better if available)
-        // Assuming you updated ChecklistContext as suggested before to use item.id
-        const itemId = defect.item.id; // Or defect.item.name if you didn't change it
-        const identifier = defect.item.id ? 'id' : 'name'; // Determine which identifier is used
+        // --- END MODIFIED ---
 
-        updateDefectDetails(defect.section, defect.item[identifier], { // Use item.id or item.name
-            category, // Store the category key (e.g., "PAINTING")
+        const itemId = defect.item.id;
+        const identifier = defect.item.id ? 'id' : 'name';
+
+        // --- MODIFIED: Added severity to the details object ---
+        updateDefectDetails(defect.section, defect.item[identifier], {
+            category,
             type,
             location,
+            severity, // <-- ADDED
             remarks,
             marks: defect.item.defectDetails?.marks || [],
         });
+        // --- END MODIFIED ---
         setMarking(true);
     };
 
@@ -168,7 +200,7 @@ export default function DefectInfoModal({ defect, onClose }) {
                         <Text style={localStyles.infoTitle}>Section {defect.section} - {defect.item.name}</Text>
                     </View>
 
-                    {/* Category Dropdown - uses options from context */}
+                    {/* Category Dropdown */}
                     <CustomDropdown
                         label="Category"
                         options={categoryOptions}
@@ -178,38 +210,46 @@ export default function DefectInfoModal({ defect, onClose }) {
                         onHeaderPress={() => handleDropdownHeaderPress('category')}
                     />
 
-                    {/* Type Dropdown - uses options generated via context helper */}
+                    {/* Type Dropdown */}
                     {category && (
-                        <>
-                            {/* <Text style={localStyles.label}>Type:</Text> */}
-                            <CustomDropdown
-                                label="Type"
-                                options={getTypeOptions()} // Use updated function
-                                selectedValue={type}
-                                onValueChange={handleTypeChange}
-                                isOpen={activeDropdown === 'type'}
-                                onHeaderPress={() => handleDropdownHeaderPress('type')}
-                            />
-                        </>
+                        <CustomDropdown
+                            label="Type"
+                            options={getTypeOptions()}
+                            selectedValue={type}
+                            onValueChange={handleTypeChange}
+                            isOpen={activeDropdown === 'type'}
+                            onHeaderPress={() => handleDropdownHeaderPress('type')}
+                        />
                     )}
 
-                    {/* Location Dropdown - remains the same */}
+                    {/* Location Dropdown */}
                     {type && (
-                        <>
-                            {/* <Text style={localStyles.label}>Location:</Text> */}
-                            <CustomDropdown
-                                label="Location"
-                                options={locationOptions}
-                                selectedValue={location}
-                                onValueChange={handleLocationChange}
-                                isOpen={activeDropdown === 'location'}
-                                onHeaderPress={() => handleDropdownHeaderPress('location')}
-                            />
-                        </>
+                         <CustomDropdown
+                             label="Location"
+                             options={locationOptions}
+                             selectedValue={location}
+                             onValueChange={handleLocationChange}
+                             isOpen={activeDropdown === 'location'}
+                             onHeaderPress={() => handleDropdownHeaderPress('location')}
+                        />
                     )}
 
-                     {/* Remarks Input - remains the same */}
-                    {location && (
+                    {/* --- NEW: Severity Dropdown --- */}
+                    {location && ( // Show after Location is selected
+                        <CustomDropdown
+                            label="Severity"
+                            options={severityOptions}
+                            selectedValue={severity}
+                            onValueChange={handleSeverityChange}
+                            isOpen={activeDropdown === 'severity'}
+                            onHeaderPress={() => handleDropdownHeaderPress('severity')}
+                        />
+                    )}
+                    {/* --- END NEW --- */}
+
+                     {/* Remarks Input */}
+                    {/* --- MODIFIED: Show after Severity is selected --- */}
+                    {severity && (
                        <>
                          <Text style={localStyles.label}>Remarks:</Text>
                          <TextInput
@@ -223,8 +263,9 @@ export default function DefectInfoModal({ defect, onClose }) {
                         />
                       </>
                     )}
+                    {/* --- END MODIFIED --- */}
 
-                    {/* Action Buttons - remain the same */}
+                    {/* Action Buttons */}
                     <View style={commonStyles.footerActionContainer}>
                         <TouchableOpacity
                             style={[commonStyles.actionButtonSecondary, localStyles.modalButton]}
@@ -233,32 +274,38 @@ export default function DefectInfoModal({ defect, onClose }) {
                             <Text style={[commonStyles.actionButtonText, localStyles.modalButtonText]}>Back</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
+                            // --- MODIFIED: Added severity check to disabled condition ---
                             style={[
                                 commonStyles.actionButton,
                                 localStyles.modalButton,
-                                (!category || !type || !location) ? commonStyles.actionButtonDisabled : {}
+                                (!category || !type || !location || !severity) ? commonStyles.actionButtonDisabled : {}
                             ]}
                             onPress={handleMark}
-                            disabled={!category || !type || !location}
+                            disabled={!category || !type || !location || !severity}
+                            // --- END MODIFIED ---
                         >
                             <Text style={[
-                                commonStyles.actionButtonPrimaryText, // Assuming primary text style for main action
+                                commonStyles.actionButtonPrimaryText,
                                 localStyles.modalButtonText,
-                                (!category || !type || !location) ? commonStyles.actionButtonTextDisabled : {}
+                                // --- MODIFIED: Added severity check to disabled text style ---
+                                (!category || !type || !location || !severity) ? commonStyles.actionButtonTextDisabled : {}
+                                // --- END MODIFIED ---
                                 ]}>Mark</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </View>
 
-            {/* Mark Modal - remains the same */}
+            {/* Mark Modal */}
             {marking && (
                 <MarkModal
                     visible={marking}
                     onClose={() => setMarking(false)}
                     selectedItem={{
                         ...defect.item,
-                        defectDetails: { category, type, location, remarks, marks: defect.item.defectDetails?.marks || [] },
+                        // --- MODIFIED: Include severity in data passed to MarkModal if needed ---
+                        defectDetails: { category, type, location, severity, remarks, marks: defect.item.defectDetails?.marks || [] },
+                        // --- END MODIFIED ---
                     }}
                     closeDefectModal={onClose}
                 />
