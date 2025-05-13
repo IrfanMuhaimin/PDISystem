@@ -18,8 +18,8 @@ export default function MainPageSupervisor({ navigation, onLogout }) {
     // Use ScreenWrapper
     <ScreenWrapper
       showHeader={true}
-      showFooter={true} // Show footer
-      contentStyle={localStyles.content} // Apply local centering/width style
+      showFooter={true}
+      contentStyle={localStyles.content}
       enableKeyboardAvoidingView={false}
       enableScrollView={false}
     >
@@ -35,6 +35,10 @@ export default function MainPageSupervisor({ navigation, onLogout }) {
 
       <TouchableOpacity style={localStyles.menuButton} onPress={() => navigation.navigate('Inspection')}>
         <Text style={localStyles.menuButtonText}>Final Inspection</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={localStyles.menuButton} onPress={() => navigation.navigate('SOP')}>
+        <Text style={localStyles.menuButtonText}>SOP</Text>
       </TouchableOpacity>
 
       {/* Logout Button */}
