@@ -126,6 +126,11 @@ const commonStyles = StyleSheet.create({
         textAlign: 'center',
         color: COLORS.grey, // Use theme grey (original #888888 was darker grey)
     },
+    actionButtonModalDisabled: {
+        fontSize: FONT_SIZES.large, // Match enabled size
+        textAlign: 'center',
+        color: COLORS.grey, // Use theme grey (original #888888 was darker grey)
+    },
 
     // --- Common Text Styles ---
     pageHeader: {
