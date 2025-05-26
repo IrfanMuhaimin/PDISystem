@@ -3,32 +3,22 @@ import React, { useState, useRef, useEffect, useContext, useCallback } from 'rea
 import {
     View, Text, StyleSheet, TouchableOpacity, Alert,
     TextInput, AppState, ActivityIndicator, FlatList,
-    Keyboard, Platform // Keep Platform import
+    Keyboard, Platform 
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RectifyContext } from '../context/RectifyContext'; // Ensure path is correct
+import { RectifyContext } from '../context/RectifyContext';
 import { debounce } from 'lodash';
-
-// --- Import ScreenWrapper ---
-// *** ADJUST PATH IF NEEDED ***
 import ScreenWrapper from '../styles/flowstudiosbg.js';
-
-// --- Import Common Styles & Constants ---
-// *** ADJUST PATH IF NEEDED ***
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
 
-// --- Constants ---
 const API_BASE_URL = 'http://pdi.flowstudios.com.my/api';
 const MIN_SEARCH_LENGTH = 5;
 const SEARCH_DEBOUNCE_DELAY = 500;
 
 export default function RectifyQrPage({ navigation }) {
-    // --- State from Context ---
     const { setRectifyData, setLoading, setError, clearRectifyData, loading, error } = useContext(RectifyContext);
-
-    // --- Component State ---
     const [chassisNumberInput, setChassisNumberInput] = useState('');
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -36,28 +26,24 @@ export default function RectifyQrPage({ navigation }) {
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [facing, setFacing] = useState('back'); // Camera facing state
 
-    // --- Refs ---
     const qrLock = useRef(false); // Lock to prevent multiple scans
     const appState = useRef(AppState.currentState); // Track app state for QR lock reset
 
-    // --- Effect Hooks ---
-
-    // Clear state and reset QR lock on screen focus
     useEffect(() => {
         const unsubscribe = navigation.addListener('focus', () => {
             console.log("RectifyQrPage focused: Clearing state.");
-            clearRectifyData(); // Clear context data
-            setChassisNumberInput(''); // Clear input field
-            setSearchResults([]); // Clear search results
-            setIsSearching(false); // Reset searching state
-            setError(null); // Clear any previous errors
-            setIsCameraOpen(false); // Ensure camera is closed
-            qrLock.current = false; // Reset QR scan lock
+            clearRectifyData();
+            setChassisNumberInput('');
+            setSearchResults([]);
+            setIsSearching(false);
+            setError(null);
+            setIsCameraOpen(false);
+            qrLock.current = false;
         });
-        return unsubscribe; // Cleanup listener on unmount
-    }, [navigation, clearRectifyData, setError]); // Dependencies
+        return unsubscribe;
+    }, [navigation, clearRectifyData, setError]);
 
-    // Reset QR lock when app returns from background
+
     useEffect(() => {
         const subscription = AppState.addEventListener("change", (nextAppState) => {
             if (appState.current.match(/inactive|background/) && nextAppState === "active") {
@@ -67,51 +53,41 @@ export default function RectifyQrPage({ navigation }) {
             appState.current = nextAppState;
         });
         return () => {
-            subscription.remove(); // Cleanup listener
+            subscription.remove();
         };
-    }, []); // No dependencies, run once on mount
+    }, []);
 
-    // Debounced search function definition using useCallback and lodash.debounce
     const debouncedSearch = useCallback(
         debounce(async (query) => {
             await handleVehicleSearch(query);
         }, SEARCH_DEBOUNCE_DELAY),
-        [] // No dependencies, function defined once
+        []
     );
 
-    // Effect to trigger debounced search based on input changes
     useEffect(() => {
         const query = chassisNumberInput.trim();
         if (query.length >= MIN_SEARCH_LENGTH) {
-            setError(null); // Clear previous errors on new valid search
-            setIsSearching(true); // Show searching indicator
-            setSearchResults([]); // Clear previous results
+            setError(null);
+            setIsSearching(true);
+            setSearchResults([]);
             console.log(`Input length >= ${MIN_SEARCH_LENGTH}, triggering debounced search for: "${query}"`);
-            debouncedSearch(query); // Call the debounced function
+            debouncedSearch(query);
         } else {
-            debouncedSearch.cancel(); // Cancel any pending debounced search
-            setIsSearching(false); // Hide searching indicator
-            setSearchResults([]); // Clear results if input is too short
-            // Clear error only if it wasn't related to minimum length perhaps? Or clear always?
-            // setError(null); // Let's clear error when input is too short as well
+            debouncedSearch.cancel();
+            setIsSearching(false);
+            setSearchResults([]);
         }
-        // Cleanup function to cancel debounced call if component unmounts or input changes again quickly
         return () => {
             debouncedSearch.cancel();
         };
-    }, [chassisNumberInput, debouncedSearch, setError]); // Dependencies
+    }, [chassisNumberInput, debouncedSearch, setError]);
 
-
-    // --- Core Functions ---
-
-    // Fetches full job card data for a specific chassis number and processes defects
     const fetchAndProcessJobCard = async (chassisNo) => {
-        // Reset UI state before fetching
-        setChassisNumberInput(''); // Clear search input
-        setSearchResults([]); // Clear search results
-        setIsSearching(false); // Stop searching indicator
-        setError(null); // Clear previous errors
-        Keyboard.dismiss(); // Dismiss keyboard
+        setChassisNumberInput('');
+        setSearchResults([]);
+        setIsSearching(false);
+        setError(null);
+        Keyboard.dismiss();
 
         if (!chassisNo || chassisNo.trim() === '') {
             Alert.alert('Internal Error', 'Chassis number is missing.');
@@ -119,18 +95,15 @@ export default function RectifyQrPage({ navigation }) {
         }
 
         console.log(`Fetching job card data for selected chassis: ${chassisNo.trim()}`);
-        setLoading(true); // Show main loading overlay via Context
+        setLoading(true);
 
         try {
-            // Get auth token
             const token = await AsyncStorage.getItem('authToken');
             if (!token) throw new Error("Authentication token not found. Please log in again.");
 
-            // Construct fetch URL
             const fetchUrl = `${API_BASE_URL}/jobcards/rectify/${chassisNo.trim()}`;
             console.log(`[fetchAndProcessJobCard] Fetching URL: ${fetchUrl}`);
 
-            // Fetch data
             const response = await fetch(fetchUrl, {
                 method: 'GET',
                 headers: {
@@ -139,11 +112,10 @@ export default function RectifyQrPage({ navigation }) {
                 }
             });
 
-            // Handle non-OK responses
             if (!response.ok) {
                 const errorBody = await response.text();
                 let parsedError = {};
-                try { parsedError = JSON.parse(errorBody); } catch (e) { /* ignore JSON parse error */ }
+                try { parsedError = JSON.parse(errorBody); } catch (e) {  }
                 console.error(`[fetchAndProcessJobCard] Fetch Error ${response.status}:`, errorBody);
                 if (response.status === 404) throw new Error(`Job card not found for chassis: ${chassisNo}`);
                 if (response.status === 401) throw new Error(parsedError.message || 'Authorization failed (401).');
@@ -151,7 +123,7 @@ export default function RectifyQrPage({ navigation }) {
                 throw new Error(parsedError.message || `Failed to fetch job card. Status: ${response.status}.`);
             }
 
-            // Parse successful response
+
             const data = await response.json();
             console.log("[fetchAndProcessJobCard] Successfully fetched job card data.");
 
@@ -434,7 +406,7 @@ export default function RectifyQrPage({ navigation }) {
                                 style={localStyles.closeButton}
                                 onPress={() => setIsCameraOpen(false)}
                             >
-                                <Text style={localStyles.closeText}>Close</Text>
+                                <Text style={localStyles.closeText}>Close Camera</Text>
                             </TouchableOpacity>
                         </View>
                     ) : (
@@ -511,25 +483,23 @@ export default function RectifyQrPage({ navigation }) {
     );
 };
 
-// --- Styles --- (Using styles defined in the previous snippet)
 const localStyles = StyleSheet.create({
-    content: { // Style for ScreenWrapper content area
+    content: {
         flexGrow: 1,
-        justifyContent: 'center', // Center content vertically
-        alignItems: 'center', // Center content horizontally
-        paddingHorizontal: PADDING.large, // Horizontal padding
-        paddingBottom: MARGIN.large, // Padding at the bottom
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: PADDING.large,
+        paddingBottom: MARGIN.large,
     },
-    centeredMessageContainer: { // For initial loading/permission messages
+    centeredMessageContainer: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
     },
-    // Titles and Text
     qrTitle: {
-        fontSize: FONT_SIZES.xxlarge, // Large title font
+        fontSize: FONT_SIZES.xxlarge,
         fontWeight: 'bold',
-        color: COLORS.primary, // Primary color
+        color: COLORS.primary,
         marginBottom: MARGIN.medium,
         textAlign: 'center',
     },
@@ -537,7 +507,7 @@ const localStyles = StyleSheet.create({
         fontSize: FONT_SIZES.medium,
         marginVertical: MARGIN.medium,
         fontWeight: 'bold',
-        color: COLORS.secondary, // Secondary color
+        color: COLORS.secondary, 
     },
     subTitle: {
         fontSize: FONT_SIZES.large,
@@ -554,7 +524,7 @@ const localStyles = StyleSheet.create({
         justifyContent: 'center',
         marginVertical: MARGIN.small,
         overflow: 'hidden',
-        position: 'relative',
+        position: 'relative', 
         backgroundColor: COLORS.white,
     },
     closeButton: {
@@ -571,69 +541,67 @@ const localStyles = StyleSheet.create({
         fontWeight: 'bold',
         fontSize: FONT_SIZES.small,
     },
-    // Input and Search Results Area
     inputContainer: {
-        width: '100%', // Take full width for input
+        width: '100%',
         alignItems: 'center',
         marginBottom: MARGIN.small,
     },
     inputFullWidth: {
-        width: '100%', // Ensure text input spans width
+        width: '100%',
     },
-    errorTextStyleOverride: { // Specific style for error text in this context
+    errorTextStyleOverride: {
         marginTop: MARGIN.xsmall,
         marginBottom: MARGIN.medium,
         textAlign: 'center',
         width: '100%',
     },
-    searchingIndicator: { // Container for searching spinner and text
+    searchingIndicator: {
         flexDirection: 'row',
         alignItems: 'center',
         marginTop: MARGIN.small,
         marginBottom: MARGIN.medium,
     },
-    searchingText: { // Text next to the searching spinner
+    searchingText: {
         marginLeft: MARGIN.small,
         fontSize: FONT_SIZES.small,
         color: COLORS.grey,
     },
-    resultsContainer: { // Container for the search results list
+    resultsContainer: {
         width: '100%',
-        maxHeight: 180, // Limit height to prevent taking too much space
+        maxHeight: 180,
         borderColor: COLORS.lightGrey,
         borderWidth: 1,
         borderRadius: 5,
         backgroundColor: COLORS.white,
         marginTop: MARGIN.xsmall,
         marginBottom: MARGIN.medium,
-        zIndex: 1, // Ensure dropdown appears above elements below it (if any)
+        zIndex: 1,
     },
-    resultsList: { // Style for the FlatList itself
-        flexGrow: 0, // Prevent FlatList from expanding infinitely
+    resultsList: {
+        flexGrow: 0,
     },
-    resultItem: { // Style for each tappable item in the search results
+    resultItem: {
         paddingVertical: PADDING.small,
         paddingHorizontal: PADDING.medium,
         borderBottomWidth: 1,
-        borderBottomColor: COLORS.divider, // Divider line
+        borderBottomColor: COLORS.divider,
     },
-    resultText: { // Main text in a result item (e.g., Chassis No)
+    resultText: {
         fontSize: FONT_SIZES.medium,
         fontWeight: '500',
         color: COLORS.secondary,
     },
-    resultSubText: { // Secondary text in a result item (e.g., Model, Color)
+    resultSubText: { 
         fontSize: FONT_SIZES.small,
         color: COLORS.grey,
-        marginTop: MARGIN.xsmall / 2, // Small spacing
+        marginTop: MARGIN.xsmall / 2,
     },
-    // Loading Overlay for full data fetch
     mainLoadingOverlay: {
-        ...StyleSheet.absoluteFillObject, // Cover the entire screen
-        backgroundColor: 'rgba(255, 255, 255, 0.85)', // Semi-transparent white
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(255, 255, 255, 0.85)',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: 999, // Ensure it's on top
+        zIndex: 999,
     },
     mainLoadingText: {
         marginTop: MARGIN.medium,
@@ -641,33 +609,31 @@ const localStyles = StyleSheet.create({
         fontWeight: 'bold',
         color: COLORS.secondary,
     },
-    // Button Container (for single Back button layout)
     buttonContainer: {
-        flexDirection: 'row', // Use row for potential future additions
-        justifyContent: 'center', // Center the button(s)
+        flexDirection: 'row',
+        justifyContent: 'center',
         width: '100%',
-        marginTop: MARGIN.large, // Space above the button
+        marginTop: MARGIN.large,
     },
-    // --- Permission Screen Styles ---
-    containerPermission: { // Container for permission request UI
+    containerPermission: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: PADDING.large,
     },
-    permissionText: { // Text explaining need for permission
+    permissionText: { 
         textAlign: 'center',
         color: COLORS.secondary,
         fontSize: FONT_SIZES.medium,
         marginBottom: MARGIN.large,
     },
-    permissionButton: { // Button to grant permission
+    permissionButton: {
         backgroundColor: COLORS.primary,
         paddingHorizontal: PADDING.large,
         paddingVertical: PADDING.medium,
         borderRadius: 5,
     },
-    permissionButtonText: { // Text inside permission button
+    permissionButtonText: {
         color: COLORS.white,
         fontSize: FONT_SIZES.medium,
         fontWeight: 'bold',

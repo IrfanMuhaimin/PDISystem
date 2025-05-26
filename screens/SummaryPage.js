@@ -6,12 +6,11 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
-import { ChecklistContext } from '../context/ChecklistContext'; // Adjust path if needed
+import { ChecklistContext } from '../context/ChecklistContext';
 import { jwtDecode } from 'jwt-decode';
-import ScreenWrapper from '../styles/flowstudiosbg.js'; // Adjust path if needed
+import ScreenWrapper from '../styles/flowstudiosbg.js';
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
 
-// --- Constants ---
 const imageKeys = ['vehicle1', 'vehicle2', 'vehicle3'];
 const baseImages = {
     'vehicle1': require('../assets/vehicle.png'),
@@ -22,14 +21,14 @@ const MARKER_SIZE = 24;
 const OLD_MARK_MODAL_IMAGE_WIDTH = 500;
 const OLD_MARK_MODAL_IMAGE_HEIGHT = 600;
 
-// --- API Endpoints ---
 const API_BASE_URL = 'http://pdi.flowstudios.com.my/api';
 const USERS_API_ENDPOINT = `${API_BASE_URL}/users`;
 const JOBCARD_SUBMIT_ENDPOINT = `${API_BASE_URL}/jobcards`;
 
-// --- Component ---
+const BATTERY_ITEM_NAME = "Battery clamps & terminal";
+const BATTERY_ITEM_SECTION = "A";
+
 export default function SummaryPage({ navigation }) {
-    // --- Context and State (Original) ---
     const { checklist, carInfo, updateCarInfo } = useContext(ChecklistContext);
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [modalVisible, setModalVisible] = useState(false);
@@ -40,12 +39,8 @@ export default function SummaryPage({ navigation }) {
     const [supervisors, setSupervisors] = useState([]);
     const [isLoadingSupervisors, setIsLoadingSupervisors] = useState(true);
     const [supervisorFetchError, setSupervisorFetchError] = useState(null);
-    // --- End Context and State ---
-
-
-    // --- Memos (Original + Severity for Display) ---
+ 
     const summary = useMemo(() => {
-        // Original summary calculation remains unchanged
         if (!checklist || typeof checklist !== 'object') { return []; }
         try {
             return Object.entries(checklist).map(([section, items]) => {
@@ -56,36 +51,41 @@ export default function SummaryPage({ navigation }) {
     }, [checklist]);
 
     const defectSummary = useMemo(() => {
-        // Extracts severity for display purposes
-        console.log("[Memo] Calculating defectSummary...");
         if (!checklist || typeof checklist !== 'object') { return []; }
         try {
-            return Object.entries(checklist).flatMap(([section, items]) => {
+            return Object.entries(checklist).flatMap(([sectionKey, items]) => {
                 const validItems = Array.isArray(items) ? items : [];
                 return validItems
-                    .filter(item => item?.defect && item?.defectDetails) // Ensure defectDetails exists
+                    .filter(item => item?.defect && item?.defectDetails)
                     .map(item => {
-                        // --- ADDED: severity extraction for display ---
+                        const isBatteryItem = item.name === BATTERY_ITEM_NAME && sectionKey === BATTERY_ITEM_SECTION;
+                        let measurementVal = null;
+                        if (isBatteryItem) {
+                            if (typeof item.defectDetails?.measurementValue === 'number') {
+                                measurementVal = item.defectDetails.measurementValue;
+                            } else if (typeof item.measurementValue === 'number') { 
+                                measurementVal = item.measurementValue;
+                            }
+                        }
+
                         return {
-                            section,
+                            section: sectionKey,
                             name: item.name,
                             category: item.defectDetails?.category || 'N/A',
                             type: item.defectDetails?.type || 'N/A',
-                            severity: item.defectDetails?.severity || 'N/A', // <-- SEVERITY FOR DISPLAY
+                            severity: item.defectDetails?.severity || 'N/A',
                             remarks: item.defectDetails?.remarks || 'No remarks',
                             location: item.defectDetails?.location || 'N/A',
                             marks: item.defectDetails?.marks || [],
                             selectedImage: item.defectDetails?.selectedImage || 'vehicle1',
+                            measurementValue: measurementVal,
+                            isBatteryItem: isBatteryItem,
                          };
-                        // --- END ADDITION ---
                     });
             });
         } catch (error) { console.error("[Memo: defectSummary] Error:", error); return []; }
     }, [checklist]);
-    // --- End Memos ---
-
-
-    // --- useEffect for supervisors (Original) ---
+    
     useEffect(() => {
         if (isSubmitting) { console.log("[SupervisorFetch - SummaryPage] Skipping fetch: isSubmitting is true."); return; }
         let isMounted = true;
@@ -125,7 +125,7 @@ export default function SummaryPage({ navigation }) {
     // --- End useEffect ---
 
 
-    // --- Helper Functions (Original) ---
+    // --- Helper Functions (Original - Keep As Is) ---
     const getImageSource = (selectedImageKey) => baseImages[selectedImageKey] || baseImages['vehicle1'];
     const handleNextImage = () => { const currentIndex = imageKeys.indexOf(selectedImageKeyForModal); const nextIndex = (currentIndex + 1) % imageKeys.length; setSummaryImageLayout(null); setSelectedImageKeyForModal(imageKeys[nextIndex]); };
     const handlePreviousImage = () => { const currentIndex = imageKeys.indexOf(selectedImageKeyForModal); const previousIndex = (currentIndex - 1 + imageKeys.length) % imageKeys.length; setSummaryImageLayout(null); setSelectedImageKeyForModal(imageKeys[previousIndex]); };
@@ -134,36 +134,40 @@ export default function SummaryPage({ navigation }) {
     // --- End Helper Functions ---
 
 
-    // --- Mark Calculation for DISPLAY (Original) ---
+    // --- Mark Calculation for DISPLAY (Original - Keep As Is) ---
     const currentImageKey = selectedImageKeyForModal || imageKeys[0];
     const defectsForCurrentImage = useMemo(() => { if (!Array.isArray(defectSummary)) return []; return defectSummary.filter(defect => defect.selectedImage === currentImageKey); }, [defectSummary, currentImageKey]);
     const renderableMarks = useMemo(() => { console.log("[Memo] Calculating renderable marks for DISPLAY. Layout:", summaryImageLayout ? 'Yes' : 'No', "Defect count:", defectsForCurrentImage.length); if (!summaryImageLayout || !Array.isArray(defectsForCurrentImage) || defectsForCurrentImage.length === 0) { return []; } const marks = []; defectsForCurrentImage.forEach((defect, index) => { const defectMarks = Array.isArray(defect.marks) ? defect.marks : []; defectMarks.forEach((mark, j) => { if (mark && typeof mark.nx === 'number' && typeof mark.ny === 'number') { const pixelX = mark.nx * summaryImageLayout.width; const pixelY = mark.ny * summaryImageLayout.height; marks.push({ key: `${defect.name}-${index}-${j}`, pixelX: pixelX - MARKER_SIZE / 2, pixelY: pixelY - MARKER_SIZE / 2, location: defect.location }); } else { console.warn(`[Mark Calc Display] Expected {nx, ny} but found:`, mark); } }); }); console.log("[Memo] Calculated marks for display:", marks.length); return marks; }, [summaryImageLayout, defectsForCurrentImage]);
     // --- End Mark Calculation ---
 
 
-    // --- handleFinish Function - MUST INCLUDE SEVERITY ---
-    const handleFinish = async () => {
+     const handleFinish = async () => {
         if (!selectedSupervisor) { Alert.alert('Supervisor Required', 'Please select the supervisor who checked the final inspection.'); return; }
         if (isSubmitting) return;
         setIsSubmitting(true);
         const endTime = new Date();
-        updateCarInfo({ ...carInfo, endTime });
+
         let staffUsername = 'unknown';
         try { const staffToken = await AsyncStorage.getItem('authToken'); if (staffToken) { const decoded = jwtDecode(staffToken); staffUsername = decoded?.username || 'unknown'; } } catch (e) { console.error("Error decoding token:", e); }
+        
         const supervisorObject = Array.isArray(supervisors) ? supervisors.find(sv => sv.id === selectedSupervisor) : null;
         const supervisorUsername = supervisorObject?.username || 'unknown_supervisor';
-        console.log(`Selected Supervisor ID: ${selectedSupervisor}, Found Username: ${supervisorUsername}`);
+
         const requestBody = {
             chassis_no: carInfo.chassis_no, staff_username: staffUsername, supervisor_username: supervisorUsername,
-            start_time: carInfo.startTime?.toISOString().slice(0, 19).replace('T', ' ') || null,
+            start_time: carInfo.startTime?.toISOString().slice(0, 19).replace('T', ' ') || new Date().toISOString().slice(0, 19).replace('T', ' '),
             end_time: endTime.toISOString().slice(0, 19).replace('T', ' '),
             defect: defectSummary.length > 0 ? 1 : 0, items: [],
         };
-        Object.entries(checklist || {}).forEach(([section, items], index) => {
-             const validItems = Array.isArray(items) ? items : [];
+
+        Object.entries(checklist || {}).forEach(([sectionKey, itemsInSection]) => {
+             const validItems = Array.isArray(itemsInSection) ? itemsInSection : [];
              validItems.forEach(item => {
                  if (!item || !item.name) return;
-                 let itemDefects = [];
+
+                 const isBatteryItem = item.name === BATTERY_ITEM_NAME && sectionKey === BATTERY_ITEM_SECTION;
+                 let itemPayloadDefects = [];
+
                  if (item.defect && item.defectDetails) {
                     const normalizedMarksFromContext = item.defectDetails.marks || [];
                     const selectedImage = item.defectDetails.selectedImage || 'vehicle1';
@@ -173,33 +177,42 @@ export default function SummaryPage({ navigation }) {
                     const firstValidMark = normalizedMarksFromContext.find( mark => mark && typeof mark.nx === 'number' && typeof mark.ny === 'number' );
                     if (firstValidMark) { formattedMarkObject = { x: firstValidMark.nx, y: firstValidMark.ny, image_id: imageId }; }
 
-                    // --- MODIFIED: Payload NOW INCLUDES severity ---
-                    const defectPayload = {
+                    const defectPayload = { 
                         category: item.defectDetails.category || 'N/A',
                         type: item.defectDetails.type || 'N/A',
-                        // --- THIS LINE IS NOW ADDED BACK ---
-                        severity: item.defectDetails.severity || 'N/A', // Provide a valid value ('Major'/'Minor' or a default if needed)
-                        // --- END ADDITION ---
-                        location: locationFromContext.toLowerCase(), // Check API spec for casing
+                        severity: item.defectDetails.severity || 'N/A',
+                        location: locationFromContext.toLowerCase(),
                         mark: formattedMarkObject,
                         remarks: item.defectDetails.remarks || '',
-                        repaired: false, // Initial submission default
+                        repaired: false,
                     };
-                    // --- END MODIFICATION ---
 
-                    // --- Important Check ---
-                    if (!defectPayload.severity || defectPayload.severity === 'N/A') {
-                        console.warn(`Defect item '${item.name}' is missing severity or has 'N/A'. Ensure a valid value ('Major'/'Minor') is always saved in DefectInfoModal.`);
-                    }
-                    // --- End Check ---
-
-                    itemDefects.push(defectPayload);
+                    itemPayloadDefects.push(defectPayload);
                  }
-                 const formattedItem = { section: index + 1, name: item.name, pass: !!item.checked, defect: itemDefects, };
+
+                 const formattedItem = {
+                     section: Object.keys(checklist).indexOf(sectionKey) + 1,
+                     name: item.name,
+                     pass: !!(item.checked && !item.defect),
+                     defect: itemPayloadDefects,
+                     value: null,
+                 };
+
+                 if (isBatteryItem) {
+                    let finalNumericValueForItem = null;
+                    if (item.defect && item.defectDetails && typeof item.defectDetails.measurementValue === 'number') {
+                        finalNumericValueForItem = item.defectDetails.measurementValue;
+                    } 
+                    else if (typeof item.measurementValue === 'number') {
+                        finalNumericValueForItem = item.measurementValue;
+                    }
+                    formattedItem.value = finalNumericValueForItem;
+                 }
+                 
                  requestBody.items.push(formattedItem);
             });
         });
-        console.log('--- Submitting Checklist Payload (WITH Severity) ---'); // Log message updated
+        console.log('--- Submitting Checklist Payload (Top-level "value" for battery) ---');
         console.log(JSON.stringify(requestBody, null, 2));
         console.log('--- End Payload ---');
         try {
@@ -209,16 +222,14 @@ export default function SummaryPage({ navigation }) {
                  let errorMsg = `Submit Failed (${response.status})`; let errorData = null;
                  try { errorData = await response.json(); errorMsg = errorData?.message || errorData?.error || JSON.stringify(errorData) || errorMsg; console.error("Server Error (JSON):", errorData); } catch (e) { try { const textError = await response.text(); errorMsg = textError || errorMsg; console.error("Server Error (Non-JSON):", textError); } catch (textE) { console.error("Failed to read error response body:", textE) } }
                  console.error("Submission failed with message:", errorMsg);
-                 throw new Error(errorMsg); // Throw the specific error message
+                 throw new Error(errorMsg);
             }
             const result = await response.json(); console.log('Submission success:', result);
+            updateCarInfo({ ...carInfo, endTime });
             setModalVisible(true);
         } catch (error) { console.error('Submission error:', error); Alert.alert('Submission Failed', error.message || 'An unexpected error occurred.'); } finally { setIsSubmitting(false); }
     };
-    // --- End handleFinish Function ---
 
-
-    // --- Render Component Structure ---
     return (
         <ScreenWrapper
             showHeader={true}
@@ -234,7 +245,7 @@ export default function SummaryPage({ navigation }) {
                 {/* Header */}
                 <Text style={[commonStyles.pageHeader, { marginBottom: MARGIN.small }]}>PDI Summary</Text>
 
-                {/* Car Info */}
+                {/* Car Info (Original) */}
                 <View style={themedStyles.infoBox}>
                      <Text style={themedStyles.carInfoText}><Text style={themedStyles.carInfoLabel}>Chassis:</Text> {carInfo?.chassis_no || 'N/A'}</Text>
                      <Text style={themedStyles.carInfoText}><Text style={themedStyles.carInfoLabel}>Model:</Text> {carInfo?.model || 'N/A'}</Text>
@@ -243,7 +254,7 @@ export default function SummaryPage({ navigation }) {
                      <Text style={themedStyles.carInfoText}><Text style={themedStyles.carInfoLabel}>Entry:</Text> {carInfo?.entry_date || 'N/A'}</Text>
                 </View>
 
-                {/* Supervisor Picker */}
+                {/* Supervisor Picker (Original) */}
                 <Text style={originalStyles.label}>Final Inspection By:</Text>
                 <View style={[originalStyles.pickerContainer, (isLoadingSupervisors || !!supervisorFetchError || supervisors.length === 0) && themedStyles.pickerContainerDisabled]}>
                      {isLoadingSupervisors ? (
@@ -269,7 +280,7 @@ export default function SummaryPage({ navigation }) {
                     )}
                 </View>
 
-                {/* Checked & Defect Summary */}
+                {/* Checked & Defect Summary (Original) */}
                 <Text style={originalStyles.label}>Checked and Defect Summary:</Text>
                 <View style={originalStyles.summaryContainerView}>
                     {summary.map(({ section, checkedCount, defectCount }, index) => (
@@ -281,7 +292,7 @@ export default function SummaryPage({ navigation }) {
                     ))}
                 </View>
 
-                {/* View Image Button */}
+                {/* View Image Button (Original) */}
                 {defectSummary.length > 0 && (
                     <View style={originalStyles.viewCenter}>
                         <TouchableOpacity
@@ -293,20 +304,21 @@ export default function SummaryPage({ navigation }) {
                     </View>
                 )}
 
-                {/* Defects Summary List */}
                 {defectSummary.length > 0 && (
                     <>
                         <Text style={originalStyles.label}>Defects Summary:</Text>
                         <View style={originalStyles.defectContainerView}>
                             {defectSummary.map((defect, index) => (
-                                // Added key for list rendering
                                 <View key={`${defect.section}-${defect.name}-${index}`} style={originalStyles.defectBox}>
                                     <Text style={originalStyles.defectItem}><Text style={originalStyles.boldText}>Section {defect.section} - {defect.name}</Text></Text>
                                     <Text style={originalStyles.defectDetail}>{defect.category} - {defect.type}</Text>
-                                    {/* --- Display Severity using existing style --- */}
                                     <Text style={originalStyles.defectDetail}>Severity: {defect.severity}</Text>
-                                    {/* --- End Display --- */}
                                     <Text style={originalStyles.defectDetail}>Location: {defect.location}</Text>
+                                    {defect.isBatteryItem && defect.measurementValue !== null && (
+                                        <Text style={originalStyles.defectDetail}>
+                                            Measured Value: {defect.measurementValue}{typeof defect.measurementValue === 'number' ? 'V' : ''}
+                                        </Text>
+                                    )}
                                     <Text style={originalStyles.remarksText}>Remarks: {defect.remarks}</Text>
                                     {defect.selectedImage && defect.marks && defect.marks.length > 0 && (
                                         <Text style={originalStyles.defectDetail}>Marked on: {defect.selectedImage}</Text>
@@ -316,12 +328,9 @@ export default function SummaryPage({ navigation }) {
                         </View>
                     </>
                 )}
-                 <View style={{ height: MARGIN.large }} />{/* Scroll bottom padding */}
+                 <View style={{ height: MARGIN.large }} />
             </ScrollView>
-            {/* --- End Scrollable Content Area --- */}
 
-
-            {/* --- Fixed Footer Buttons (Original) --- */}
             <View style={originalStyles.footer}>
                 <TouchableOpacity
                     style={[originalStyles.buttonBack, isSubmitting && originalStyles.buttonDisabled]}
@@ -338,7 +347,7 @@ export default function SummaryPage({ navigation }) {
                     disabled={ !selectedSupervisor || isSubmitting || isLoadingSupervisors || !!supervisorFetchError || supervisors.length === 0 }
                 >
                     {isSubmitting ? (
-                        <ActivityIndicator size="small" color={COLORS.black} /> // Color adjusted for visibility on primaryLight bg
+                        <ActivityIndicator size="small" color={COLORS.black} />
                     ) : (
                         <Text style={[ originalStyles.buttonText,
                                      ( !selectedSupervisor || isLoadingSupervisors || !!supervisorFetchError || supervisors.length === 0)
@@ -348,16 +357,8 @@ export default function SummaryPage({ navigation }) {
                     )}
                 </TouchableOpacity>
             </View>
-            {/* --- End Fixed Footer Buttons --- */}
 
-
-            {/* --- Modals (Original) --- */}
-            {/* Image Modal */}
-            <Modal
-                visible={imageModalVisible}
-                transparent animationType="slide"
-                onRequestClose={() => {setImageModalVisible(false);}}
-            >
+            <Modal visible={imageModalVisible} transparent animationType="slide" onRequestClose={() => {setImageModalVisible(false);}} >
                 <View style={originalStyles.modalContainer}>
                      <Text style={originalStyles.modalHeader}>Defect Locations</Text>
                     <View style={originalStyles.imageSelector}>
@@ -372,57 +373,33 @@ export default function SummaryPage({ navigation }) {
                         </TouchableOpacity>
                     </View>
                     <View style={originalStyles.imageWrapper}>
-                        <Image
-                            key={currentImageKey} source={getImageSource(currentImageKey)}
-                            style={originalStyles.image}
-                            onLayout={onSummaryImageLayout} resizeMode="contain"
-                        />
-                        {!summaryImageLayout && (
-                            <View style={originalStyles.loadingOverlay}>
-                                <ActivityIndicator size="large" color={COLORS.white} />
-                                <Text style={originalStyles.loadingText}>Calculating Layout...</Text>
-                            </View>
-                        )}
-                        {summaryImageLayout && renderableMarks.map((mark) => (
-                            <View key={mark.key} style={[ originalStyles.markerContainer, { left: mark.pixelX, top: mark.pixelY } ]} >
-                                {mark.location === 'Interior' && <View style={originalStyles.circle} />}
-                                <Text style={originalStyles.xMark}>X</Text>
-                            </View>
-                        ))}
+                        <Image key={currentImageKey} source={getImageSource(currentImageKey)} style={originalStyles.image} onLayout={onSummaryImageLayout} resizeMode="contain" />
+                        {!summaryImageLayout && ( <View style={originalStyles.loadingOverlay}><ActivityIndicator size="large" color={COLORS.white} /><Text style={originalStyles.loadingText}>Calculating Layout...</Text></View> )}
+                        {summaryImageLayout && renderableMarks.map((mark) => ( <View key={mark.key} style={[ originalStyles.markerContainer, { left: mark.pixelX, top: mark.pixelY } ]} > {mark.location === 'Interior' && <View style={originalStyles.circle} />} <Text style={originalStyles.xMark}>X</Text> </View> ))}
                      </View>
                      <TouchableOpacity style={originalStyles.closeButton} onPress={() => {setImageModalVisible(false);}} >
                         <Text style={originalStyles.closeText}>Close</Text>
                      </TouchableOpacity>
                 </View>
             </Modal>
-
-            {/* Success Modal */}
-            <Modal
-                visible={modalVisible}
-                transparent animationType="fade"
-                onRequestClose={() => { /* Prevent closing */ }}>
+            <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => { }}>
                 <View style={themedStyles.successModalContainer}>
                     <View style={themedStyles.successModalContent}>
                         <Text style={themedStyles.successModalTitle}>Success!</Text>
                         <Text style={themedStyles.successModalText}>Job Card has been submitted.</Text>
                         <Text style={themedStyles.successModalTimeText}>Entry Time: {carInfo.startTime ? formatTime(carInfo.startTime) : 'N/A'}</Text>
                         <Text style={themedStyles.successModalTimeText}>Exit Time: {carInfo.endTime ? formatTime(carInfo.endTime) : 'N/A'}</Text>
-                        <TouchableOpacity
-                            style={[commonStyles.actionButton, themedStyles.successModalButton]}
-                            onPress={() => { setModalVisible(false); navigation.navigate('Home'); }} >
-                            <Text style={commonStyles.actionButtonPrimaryText}>Okay</Text>
+                        <TouchableOpacity style={[commonStyles.actionButton, themedStyles.successModalButton]} onPress={() => { setModalVisible(false); navigation.navigate('Home'); }} >
+                            <Text style={commonStyles.actionButtonPrimaryText || originalStyles.buttonText}>Okay</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </Modal>
-            {/* --- End Modals --- */}
 
         </ScreenWrapper>
     );
 }
 
-
-// --- Styles (Original - Unchanged) ---
 const originalStyles = StyleSheet.create({
     scrollView: { flex: 1, backgroundColor: 'transparent', },
     scrollContentContainer: { paddingHorizontal: PADDING.medium, paddingTop: PADDING.small, paddingBottom: PADDING.large, },
@@ -442,7 +419,7 @@ const originalStyles = StyleSheet.create({
     defectContainerView: { marginVertical: MARGIN.small, },
     defectBox: { backgroundColor: COLORS.redinfo, padding: PADDING.medium, borderRadius: 5, marginBottom: MARGIN.small, borderWidth: 1, borderColor: COLORS.danger, },
     defectItem: { fontSize: FONT_SIZES.medium, fontWeight: 'bold', color: COLORS.secondary, marginBottom: MARGIN.xsmall, },
-    defectDetail: { fontSize: FONT_SIZES.small, color: COLORS.danger, marginBottom: MARGIN.xsmall, }, // Reusing this style for severity display
+    defectDetail: { fontSize: FONT_SIZES.small, color: COLORS.danger, marginBottom: MARGIN.xsmall, },
     remarksText: { fontSize: FONT_SIZES.small, fontStyle: 'italic', color: COLORS.grey, },
     boldText: { fontWeight: 'bold', },
     modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)', padding: PADDING.large, },
@@ -464,7 +441,7 @@ const originalStyles = StyleSheet.create({
     buttonBackText: { color: COLORS.secondary, },
     buttonDisabled: { backgroundColor: COLORS.disabled, opacity: 0.7, },
     buttonTextDisabled: { color: COLORS.grey, },
-    loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10, },
+    loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10, }, // This is the general loading overlay
     loadingText: { marginTop: MARGIN.small, color: COLORS.white, fontSize: FONT_SIZES.small, },
 });
 
@@ -484,8 +461,7 @@ const themedStyles = StyleSheet.create({
     pickerPlaceholder: { fontSize: FONT_SIZES.medium, color: COLORS.grey, textAlign: 'left', paddingVertical: PADDING.medium, paddingHorizontal: PADDING.medium, },
     pickerPlaceholderItem: { color: COLORS.lightGrey, fontSize: FONT_SIZES.medium, },
     pickerItem: { fontSize: FONT_SIZES.medium, color: COLORS.secondary, },
-     summaryHeaderRow: { backgroundColor: COLORS.lightGrey, borderTopWidth: 0, borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey, },
-     summaryHeaderText: { fontWeight: 'bold', color: COLORS.secondary, textAlign: 'center', fontSize: FONT_SIZES.medium, },
-      firstSummaryRow: { borderTopWidth: 0, },
+    summaryHeaderRow: { backgroundColor: COLORS.lightGrey, borderTopWidth: 0, borderBottomWidth: 1, borderBottomColor: COLORS.lightGrey, },
+    summaryHeaderText: { fontWeight: 'bold', color: COLORS.secondary, textAlign: 'center', fontSize: FONT_SIZES.medium, },
+    firstSummaryRow: { borderTopWidth: 0, },
 });
-// --- End Styles ---

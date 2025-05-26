@@ -42,12 +42,12 @@ export default function RectifySummaryPage({ navigation }) {
     // Fetch supervisors logic remains the same
     useEffect(() => {
         if (isSubmitting) { setValidationError(null); return; } let isMounted = true; setSupervisorFetchError(null);
-        const fetchAndFilterSupervisors = async () => { if (isMounted) { setIsLoadingSupervisors(true); setSupervisors([]); setSupervisorFetchError(null);} else { return; } try { const token = await AsyncStorage.getItem('authToken'); if (!token) throw new Error("Token missing."); const response = await fetch(USERS_API_ENDPOINT, { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }); const status = response.status; console.log(`[SupervisorFetch] Status: ${status}`); if (!response.ok) { const txt = await response.text(); console.error(`[SupervisorFetch] Error ${status}:`, txt); if (status === 403) throw new Error("Permission denied (403)."); throw new Error(`Fetch users failed (${status})`); } const data = await response.json(); if (!Array.isArray(data)) throw new Error("Invalid data format."); const filtered = data.filter(u => u?.type === 'Supervisor'); console.log(`[SupervisorFetch] Found ${filtered.length} supervisors.`); if (isMounted) { setSupervisors(filtered); setSupervisorFetchError(null); } } catch (error) { if (isMounted) { console.error("[SupervisorFetch] Error:", error); setSupervisorFetchError(error.message || 'Load failed.'); setSupervisors([]); } } finally { if (isMounted) { setIsLoadingSupervisors(false); console.log("[SupervisorFetch] Loading set false."); } } }; fetchAndFilterSupervisors();
+        const fetchAndFilterSupervisors = async () => { if (isMounted) { setIsLoadingSupervisors(true); setSupervisors([]); setSupervisorFetchError(null); } else { return; } try { const token = await AsyncStorage.getItem('authToken'); if (!token) throw new Error("Token missing."); const response = await fetch(USERS_API_ENDPOINT, { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }); const status = response.status; console.log(`[SupervisorFetch] Status: ${status}`); if (!response.ok) { const txt = await response.text(); console.error(`[SupervisorFetch] Error ${status}:`, txt); if (status === 403) throw new Error("Permission denied (403)."); throw new Error(`Fetch users failed (${status})`); } const data = await response.json(); if (!Array.isArray(data)) throw new Error("Invalid data format."); const filtered = data.filter(u => u?.type === 'Supervisor'); console.log(`[SupervisorFetch] Found ${filtered.length} supervisors.`); if (isMounted) { setSupervisors(filtered); setSupervisorFetchError(null); } } catch (error) { if (isMounted) { console.error("[SupervisorFetch] Error:", error); setSupervisorFetchError(error.message || 'Load failed.'); setSupervisors([]); } } finally { if (isMounted) { setIsLoadingSupervisors(false); console.log("[SupervisorFetch] Loading set false."); } } }; fetchAndFilterSupervisors();
         return () => { isMounted = false; };
     }, [isSubmitting]);
 
     // Validation effect remains the same
-     useEffect(() => { if (isSubmitting) return; const carOk = !!carInfo; const itemsOk = Array.isArray(rectifyItems); let errorMsg = null; if (!carOk) errorMsg = "Required 'Car Info' not found."; else if (!itemsOk) errorMsg = "Required 'Rectification Items List' not found."; setValidationError(errorMsg); }, [carInfo, rectifyItems, isSubmitting]);
+    useEffect(() => { if (isSubmitting) return; const carOk = !!carInfo; const itemsOk = Array.isArray(rectifyItems); let errorMsg = null; if (!carOk) errorMsg = "Required 'Car Info' not found."; else if (!itemsOk) errorMsg = "Required 'Rectification Items List' not found."; setValidationError(errorMsg); }, [carInfo, rectifyItems, isSubmitting]);
 
     // Grouping memo remains the same (logic is correct)
     const { sectionSummary, groupedRectifiedItems, sortedRectifiedSections, calculationError } = useMemo(() => {
@@ -60,7 +60,7 @@ export default function RectifySummaryPage({ navigation }) {
 
     // handleFinishRectification remains the same (API logic is specific)
     const handleFinishRectification = async () => {
-        if (!carInfo?.chassis_no || !selectedSupervisor) { Alert.alert('Error', !carInfo?.chassis_no ? 'Missing Chassis Number.' : 'Please select supervisor.'); return; } if (typeof groupedRectifiedItems !== 'object' || !groupedRectifiedItems) { Alert.alert('Error', 'Internal error: Data invalid.'); return; } let flatRectifiedItems = []; try { flatRectifiedItems = Object.values(groupedRectifiedItems).flat(); } catch (error) { Alert.alert('Error', 'Failed to prepare items.'); return; } setIsSubmitting(true); setSubmitError(null); console.log("Submitting rectification..."); try { const token = await AsyncStorage.getItem('authToken'); if (!token) throw new Error("Token missing."); const apiPayload = { chassis_no: carInfo.chassis_no, supervisor_id: selectedSupervisor, rectify_items: flatRectifiedItems.map(item => { const defectInfo = item.allDefects?.[0]; return { id: item.id, staff_name: item.rectifierName || null, staff_no: item.rectifierNo || null, date: item.rectificationDate ? new Date(item.rectificationDate).toISOString().split('T')[0] : null, remarks: item.remark || null, defect_id: defectInfo?.id || null }; }), }; console.log("Payload:", JSON.stringify(apiPayload, null, 2)); const response = await fetch(RECTIFY_API_ENDPOINT, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json', 'Content-Type': 'application/json', }, body: JSON.stringify(apiPayload), }); console.log(`Submit Status: ${response.status}`); if (!response.ok) { const errorBody = await response.text(); let parsedError = { message: `Failed (${response.status})` }; try { parsedError = JSON.parse(errorBody) } catch (e) {} console.error("Submit Error:", errorBody); const errorMsg = parsedError.message || `Failed. Status: ${response.status}.`; if (response.status === 422 && parsedError.errors) { throw new Error(`Failed:\n${Object.values(parsedError.errors).flat().join('\n')}`); } throw new Error(errorMsg); } const data = await response.json(); console.log("Submit Success:", data); Alert.alert('Success', 'Rectification data submitted.'); clearRectifyData(); navigation.reset({ index: 0, routes: [{ name: 'Home' }], }); } catch (error) { console.error("Submit Error:", error); Alert.alert('Error Submitting', error.message || 'Unexpected error.'); setSubmitError(error.message); setIsSubmitting(false); }
+        if (!carInfo?.chassis_no || !selectedSupervisor) { Alert.alert('Error', !carInfo?.chassis_no ? 'Missing Chassis Number.' : 'Please select supervisor.'); return; } if (typeof groupedRectifiedItems !== 'object' || !groupedRectifiedItems) { Alert.alert('Error', 'Internal error: Data invalid.'); return; } let flatRectifiedItems = []; try { flatRectifiedItems = Object.values(groupedRectifiedItems).flat(); } catch (error) { Alert.alert('Error', 'Failed to prepare items.'); return; } setIsSubmitting(true); setSubmitError(null); console.log("Submitting rectification..."); try { const token = await AsyncStorage.getItem('authToken'); if (!token) throw new Error("Token missing."); const apiPayload = { chassis_no: carInfo.chassis_no, supervisor_id: selectedSupervisor, rectify_items: flatRectifiedItems.map(item => { const defectInfo = item.allDefects?.[0]; return { id: item.id, staff_name: item.rectifierName || null, staff_no: item.rectifierNo || null, date: item.rectificationDate ? new Date(item.rectificationDate).toISOString().split('T')[0] : null, remarks: item.remark || null, closed: item.closed || false, defect_id: defectInfo?.id || null }; }), }; console.log("Payload:", JSON.stringify(apiPayload, null, 2)); const response = await fetch(RECTIFY_API_ENDPOINT, { method: 'POST', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json', 'Content-Type': 'application/json', }, body: JSON.stringify(apiPayload), }); console.log(`Submit Status: ${response.status}`); if (!response.ok) { const errorBody = await response.text(); let parsedError = { message: `Failed (${response.status})` }; try { parsedError = JSON.parse(errorBody) } catch (e) { } console.error("Submit Error:", errorBody); const errorMsg = parsedError.message || `Failed. Status: ${response.status}.`; if (response.status === 422 && parsedError.errors) { throw new Error(`Failed:\n${Object.values(parsedError.errors).flat().join('\n')}`); } throw new Error(errorMsg); } const data = await response.json(); console.log("Submit Success:", data); Alert.alert('Success', 'Rectification data submitted.'); clearRectifyData(); navigation.reset({ index: 0, routes: [{ name: 'Home' }], }); } catch (error) { console.error("Submit Error:", error); Alert.alert('Error Submitting', error.message || 'Unexpected error.'); setSubmitError(error.message); setIsSubmitting(false); }
     };
 
     // --- Render Component JSX ---
@@ -75,29 +75,29 @@ export default function RectifySummaryPage({ navigation }) {
         >
             {/* --- Scrollable Content Area --- */}
             <ScrollView
-                 style={localStyles.scrollView}
-                 contentContainerStyle={localStyles.scrollContentContainer}
-                 keyboardShouldPersistTaps="handled"
+                style={localStyles.scrollView}
+                contentContainerStyle={localStyles.scrollContentContainer}
+                keyboardShouldPersistTaps="handled"
             >
                 {/* Page Header */}
                 <Text style={commonStyles.pageHeader}>Rectification Summary</Text>
 
-                 {/* Display validation errors first */}
+                {/* Display validation errors first */}
                 {validationError && !isSubmitting && (
                     <View style={localStyles.errorBox}>
                         <Text style={commonStyles.errorText}>{validationError}</Text>
                     </View>
-                 )}
+                )}
                 {calculationError && !isSubmitting && (
                     <View style={localStyles.errorBox}>
-                         <Text style={commonStyles.errorText}>Processing Error: {calculationError}</Text>
+                        <Text style={commonStyles.errorText}>Processing Error: {calculationError}</Text>
                     </View>
                 )}
                 {submitError && !isSubmitting && (
                     <View style={localStyles.errorBox}>
                         <Text style={commonStyles.errorText}>Submit Error: {submitError}</Text>
                     </View>
-                 )}
+                )}
 
                 {/* Only show content if no validation/calculation errors */}
                 {!validationError && !calculationError && (
@@ -109,7 +109,7 @@ export default function RectifySummaryPage({ navigation }) {
                                 <Text style={localStyles.carInfo}>Model: <Text style={localStyles.carInfoValue}>{carInfo.model}</Text></Text>
                             </View>
                         ) : (
-                             <ActivityIndicator color={COLORS.primary} style={{ marginVertical: MARGIN.large }} />
+                            <ActivityIndicator color={COLORS.primary} style={{ marginVertical: MARGIN.large }} />
                         )}
 
                         {/* Supervisor Picker */}
@@ -165,14 +165,22 @@ export default function RectifySummaryPage({ navigation }) {
                                             <View key={`${item.id}-${index}`} style={localStyles.summaryItem}>
                                                 <Text style={localStyles.itemText}>{`${index + 1}. ${item.name || 'Unknown Item'}`}</Text>
                                                 <View style={localStyles.detailsContainer}>
-                                                    {defectInfo && ( <>
+                                                    {defectInfo && (<>
                                                         <View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Defect Category</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={localStyles.detailValue}>{defectInfo.category || 'N/A'}</Text></View>
                                                         <View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Defect Type</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={localStyles.detailValue}>{defectInfo.type || 'N/A'}</Text></View>
                                                         <View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Defect Severity</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={localStyles.detailValue}>{defectInfo.severity || 'N/A'}</Text></View>
-                                                    </> )}
+                                                    </>)}
                                                     <View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Rectified By</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={localStyles.detailValue}>{item.rectifierName || 'N/A'} ({item.rectifierNo || 'N/A'})</Text></View>
-                                                    <View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Date Rectified</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={localStyles.detailValue}>{formatDate(item.rectificationDate)}</Text></View>
-                                                    {item.remark && ( <View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Remark</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={[localStyles.detailValue, localStyles.remarkText]}>{item.remark}</Text></View> )}
+                                                    {defectInfo?.severity === 'Minor' && (
+                                                        <View style={localStyles.detailRow}>
+                                                            <Text style={localStyles.detailLabel}>Closed</Text>
+                                                            <Text style={localStyles.detailSeparator}>:</Text>
+                                                            <Text style={localStyles.detailValue}>
+                                                                {item.closed === true ? 'Yes' : 'No'}
+                                                            </Text>
+                                                        </View>
+                                                    )}<View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Date Rectified</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={localStyles.detailValue}>{formatDate(item.rectificationDate)}</Text></View>
+                                                    {item.remark && (<View style={localStyles.detailRow}><Text style={localStyles.detailLabel}>Remark</Text><Text style={localStyles.detailSeparator}>:</Text><Text style={[localStyles.detailValue, localStyles.remarkText]}>{item.remark}</Text></View>)}
                                                 </View>
                                             </View>
                                         );
@@ -181,9 +189,9 @@ export default function RectifySummaryPage({ navigation }) {
                             ))
                         ) : (<Text style={commonStyles.noDataText}>No items marked as rectified.</Text>)}
                     </>
-                 )}
+                )}
             </ScrollView>
-             {/* --- End Scrollable Content --- */}
+            {/* --- End Scrollable Content --- */}
 
 
             {/* --- Fixed Footer Buttons --- */}
@@ -212,10 +220,10 @@ export default function RectifySummaryPage({ navigation }) {
                     {isSubmitting
                         ? <ActivityIndicator size="small" color={COLORS.white} />
                         : <Text style={[
-                              commonStyles.actionButtonPrimaryText,
-                              // Also disable text color if button is disabled
-                              (isLoadingSupervisors || !!supervisorFetchError || !selectedSupervisor || supervisors.length === 0 || !!calculationError || !!validationError) && commonStyles.actionButtonTextDisabled
-                          ]}>Finish</Text>
+                            commonStyles.actionButtonPrimaryText,
+                            // Also disable text color if button is disabled
+                            (isLoadingSupervisors || !!supervisorFetchError || !selectedSupervisor || supervisors.length === 0 || !!calculationError || !!validationError) && commonStyles.actionButtonTextDisabled
+                        ]}>Finish</Text>
                     }
                 </TouchableOpacity>
             </View>

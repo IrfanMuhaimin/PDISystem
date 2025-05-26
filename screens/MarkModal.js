@@ -1,178 +1,193 @@
+// screens/MarkModal.js (Reverted image size and marker positioning to original, with prop fix)
 import React, { useContext, useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Modal } from 'react-native';
-import { ChecklistContext } from '../context/ChecklistContext';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, ActivityIndicator } from 'react-native';
+import { ChecklistContext } from '../context/ChecklistContext'; // Adjust path as needed
 
-// --- Keep original constants ---
+// --- Constants ---
 const imageKeys = ['vehicle1', 'vehicle2', 'vehicle3'];
 const baseImages = {
-    'vehicle1': require('../assets/vehicle.png'),
-    'vehicle2': require('../assets/vehicle2.png'),
-    'vehicle3': require('../assets/vehicle3.png')
+    'vehicle1': require('../assets/vehicle.png'),    // Adjust path as needed
+    'vehicle2': require('../assets/vehicle2.png'),    // Adjust path as needed
+    'vehicle3': require('../assets/vehicle3.png')     // Adjust path as needed
 };
-const MARKER_SIZE = 24;
+const MARKER_SIZE = 24; // As per your original styles
 
-export default function MarkModal({ visible, onClose, selectedItem, closeDefectModal }) {
-    // --- Keep original state and context hooks ---
+export default function MarkModal({
+    visible,
+    onClose,
+    selectedItem,         // Prop received from DefectInfoModal
+    closeDefectModal
+}) {
     const { updateDefectDetails } = useContext(ChecklistContext);
-    const [selectedImageKey, setSelectedImageKey] = useState('vehicle1');
-    const [marks, setMarks] = useState([]);
+
+    const [currentSelectedImageKey, setCurrentSelectedImageKey] = useState(imageKeys[0]);
+    const [currentMarks, setCurrentMarks] = useState([]);
     const [imageLayout, setImageLayout] = useState(null);
-    const isInitialRenderForVisibility = useRef(true); // Ref to track initial setup
+    const isInitialSetupDone = useRef(false);
 
-    // *** REVISED useEffect Hook ***
+    // Derived itemInfo and initialDefectDetails from selectedItem
+    const itemInfo = selectedItem ? {
+                                        id: selectedItem.id,
+                                        section: selectedItem.section,
+                                        name: selectedItem.name
+                                    } : null;
+    const initialDefectDetailsFromProp = selectedItem?.defectDetails || {};
+
+
     useEffect(() => {
-        // This effect now ONLY sets state when visibility CHANGES FROM false TO true
         if (visible) {
-            // Check the ref to see if we already processed this visibility event
-            if (isInitialRenderForVisibility.current) {
-                console.log('[Effect] Initial setup for visible modal. Item:', selectedItem?.name);
-                if (selectedItem) {
-                    const initialImageKey = selectedItem.defectDetails?.selectedImage || 'vehicle1';
-                    // Load marks ONLY if they were explicitly saved for the initialImageKey
-                    const initialMarks = (selectedItem.defectDetails?.selectedImage === initialImageKey)
-                                         ? (selectedItem.defectDetails.marks || [])
-                                         : [];
+            if (!isInitialSetupDone.current) {
+                console.log('[MarkModal Effect] Initial setup. Item Name:', itemInfo?.name);
+                console.log('[MarkModal Effect] Received initialDefectDetailsFromProp:', JSON.stringify(initialDefectDetailsFromProp));
 
-                    console.log(`[Effect] Setting initial state: key=${initialImageKey}, marksCount=${initialMarks.length}`);
-                    setSelectedImageKey(initialImageKey);
-                    setMarks(initialMarks);
-                    setImageLayout(null); // Reset layout for measurement
-                } else {
-                    // Fallback if no item (shouldn't happen with correct usage)
-                    console.log('[Effect] No selected item on initial visibility, resetting state.');
-                    setSelectedImageKey('vehicle1');
-                    setMarks([]);
-                    setImageLayout(null);
-                }
-                // Mark initial setup as done for this visibility period
-                isInitialRenderForVisibility.current = false;
-            } else {
-                 console.log('[Effect] Skipping state set, not initial render for this visibility period.');
+                const imgKey = initialDefectDetailsFromProp?.selectedImage || imageKeys[0];
+                const initMarks = (initialDefectDetailsFromProp?.selectedImage === imgKey && Array.isArray(initialDefectDetailsFromProp.marks))
+                                   ? initialDefectDetailsFromProp.marks
+                                   : [];
+
+                setCurrentSelectedImageKey(imgKey);
+                setCurrentMarks(initMarks);
+                setImageLayout(null);
+                isInitialSetupDone.current = true;
+                console.log(`[MarkModal Effect] Initial state set: imageKey=${imgKey}, marksCount=${initMarks.length}`);
             }
         } else {
-            // Reset the ref when the modal becomes hidden
-            console.log('[Effect] Modal hidden, resetting initial render flag.');
-            isInitialRenderForVisibility.current = true;
-            setImageLayout(null); // Also clear layout when hidden
+            isInitialSetupDone.current = false;
         }
-    }, [visible, selectedItem]); // Keep dependencies, but logic inside controls execution
+    }, [visible, selectedItem]); // Using selectedItem directly as a dependency
 
-
-    // --- Keep original handleImageTap function ---
     const handleImageTap = (event) => {
-        if (!selectedItem || !imageLayout) return;
+        if (!itemInfo || !itemInfo.id || !itemInfo.section) {
+            console.error("[MarkModal Tap] Critical: itemInfo, item ID, or section is missing. selectedItem was:", JSON.stringify(selectedItem));
+            return;
+        }
+        if (!imageLayout) {
+            console.warn("[MarkModal Tap] Image layout not available yet.");
+            return;
+        }
+
         const { locationX, locationY } = event.nativeEvent;
         const { width, height } = imageLayout;
-        if (locationX < 0 || locationX > width || locationY < 0 || locationY > height) return;
+
+        if (locationX < 0 || locationX > width || locationY < 0 || locationY > height) {
+            console.warn("[MarkModal Tap] Tap occurred out of image bounds.");
+            return;
+        }
+
         const newMark = { nx: locationX / width, ny: locationY / height };
-        const updatedMarks = [...marks, newMark];
-        setMarks(updatedMarks);
-        // Update context based on the *CURRENTLY* selected image key in the state
-        updateDefectDetails(selectedItem.section, selectedItem.name, {
-            ...selectedItem.defectDetails,
-            marks: updatedMarks,
-            selectedImage: selectedImageKey, // Use state value here
-        });
+        const updatedMarksForThisImage = [...currentMarks, newMark];
+        setCurrentMarks(updatedMarksForThisImage);
+
+        const defectDetailsToSave = {
+            ...initialDefectDetailsFromProp,
+            marks: updatedMarksForThisImage,
+            selectedImage: currentSelectedImageKey,
+        };
+
+        console.log(`[MarkModal Tap] Updating context for item ${itemInfo.id}, section ${itemInfo.section}. Payload:`, JSON.stringify(defectDetailsToSave));
+        updateDefectDetails(itemInfo.section, itemInfo.id, defectDetailsToSave);
+
         setTimeout(() => {
             onClose();
-            if (closeDefectModal) closeDefectModal();
+            if (closeDefectModal) {
+                closeDefectModal();
+            }
         }, 0);
     };
 
-    // --- Keep original handleImageChange function ---
     const handleImageChange = (newImageKey) => {
-        console.log(`handleImageChange: Setting state key = ${newImageKey}`);
-        setSelectedImageKey(newImageKey); // Update local state
-        setMarks([]);                 // Clear local marks view
-        setImageLayout(null);        // Reset layout
+        if (!itemInfo || !itemInfo.id || !itemInfo.section) {
+            console.error("[MarkModal ImageChange] Critical: itemInfo, item ID, or section is missing.");
+            return;
+        }
 
-        // Update context with the new image key being viewed
-        // Let handleImageTap handle saving marks specific to this key
-        updateDefectDetails(selectedItem.section, selectedItem.name, {
-            ...selectedItem.defectDetails,
-            // Important: Don't clear marks in context here, only update the selected image pointer
+        console.log(`[MarkModal ImageChange] Changing to image: ${newImageKey}`);
+        setCurrentSelectedImageKey(newImageKey);
+        setCurrentMarks([]);
+        setImageLayout(null);
+
+        const defectDetailsForImageChange = {
+            ...initialDefectDetailsFromProp,
             selectedImage: newImageKey,
-        });
+            marks: [],
+        };
+        console.log(`[MarkModal ImageChange] Updating context for item ${itemInfo.id}. Payload:`, JSON.stringify(defectDetailsForImageChange));
+        updateDefectDetails(itemInfo.section, itemInfo.id, defectDetailsForImageChange);
     };
 
-    // --- Keep original getImageSource function ---
-    const getImageSource = () => {
-        console.log(`[Render] getImageSource called with key: ${selectedImageKey}`);
-        return baseImages[selectedImageKey] || baseImages['vehicle1'];
-    };
+    const getImageSource = () => baseImages[currentSelectedImageKey] || baseImages[imageKeys[0]];
 
-    // --- Keep original navigation handlers ---
     const handleNextImage = () => {
-        const currentIndex = imageKeys.indexOf(selectedImageKey);
+        const currentIndex = imageKeys.indexOf(currentSelectedImageKey);
         const nextIndex = (currentIndex + 1) % imageKeys.length;
         handleImageChange(imageKeys[nextIndex]);
     };
 
     const handlePreviousImage = () => {
-        const currentIndex = imageKeys.indexOf(selectedImageKey);
+        const currentIndex = imageKeys.indexOf(currentSelectedImageKey);
         const previousIndex = (currentIndex - 1 + imageKeys.length) % imageKeys.length;
         handleImageChange(imageKeys[previousIndex]);
     };
 
-    // --- Keep original onImageLayout callback ---
      const onImageLayout = useCallback((event) => {
         const { width, height } = event.nativeEvent.layout;
-        console.log(`[Layout] Measured: ${width}x${height} for key ${selectedImageKey}`);
-        // Check layout dimensions before setting state
+        // console.log(`[MarkModal Layout] Measured: ${width}x${height} for key ${currentSelectedImageKey}`);
         if (width > 0 && height > 0) {
              if (!imageLayout || imageLayout.width !== width || imageLayout.height !== height) {
                 setImageLayout({ width, height });
+                console.log(`[MarkModal Layout] Layout SET for ${currentSelectedImageKey}: ${width}x${height}`);
             }
         } else {
-            console.warn(`[Layout] Invalid layout dimensions measured: ${width}x${height}`);
+            console.warn(`[MarkModal Layout] Invalid layout dimensions measured: ${width}x${height}`);
         }
-    }, [imageLayout, selectedImageKey]); // Add selectedImageKey dependency
+    }, [imageLayout, currentSelectedImageKey]);
 
 
-    // --- Rendering Logic ---
-    console.log(`[Render] Rendering MarkModal. Current selectedImageKey state: ${selectedImageKey}`);
+    if (!visible) {
+        return null;
+    }
 
     return (
         <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
             <View style={styles.modalContainer}>
-                <Text style={styles.header}>Mark Defect Location</Text>
+                <Text style={styles.header}>Mark Defect on: {itemInfo?.name || 'Item'}</Text>
                 <View style={styles.imageSelector}>
-                    <TouchableOpacity onPress={handlePreviousImage} style={styles.imageButton}>
+                    <TouchableOpacity onPress={handlePreviousImage} style={styles.imageButton} disabled={imageKeys.length <=1}>
                         <Text style={styles.imageButtonText}>Back</Text>
                     </TouchableOpacity>
-                     <Text style={{color:'white', marginHorizontal: 10, fontSize: 16, fontWeight: 'bold'}}>{selectedImageKey}</Text>
-                    <TouchableOpacity onPress={handleNextImage} style={styles.imageButton}>
+                    <Text style={styles.imageKeyText}>{currentSelectedImageKey}</Text>
+                    <TouchableOpacity onPress={handleNextImage} style={styles.imageButton} disabled={imageKeys.length <=1}>
                         <Text style={styles.imageButtonText}>Next</Text>
                     </TouchableOpacity>
                 </View>
                 <View>
                     <TouchableOpacity activeOpacity={1} onPress={handleImageTap} disabled={!imageLayout}>
                         <Image
-                            key={selectedImageKey} // Keep the key prop!
+                            key={currentSelectedImageKey}
                             source={getImageSource()}
-                            style={styles.image}
+                            style={styles.image} // Reverted to use your styles.image
                             onLayout={onImageLayout}
-                            onError={(e) => console.error("Image Load Error:", e.nativeEvent.error)}
+                            onError={(e) => console.error("Image Load Error for key " + currentSelectedImageKey + ":", e.nativeEvent.error)}
                         />
-                        {imageLayout && marks.map((mark, index) => {
+                        {imageLayout && currentMarks.map((mark, index) => {
                             const pixelX = mark.nx * imageLayout.width;
                             const pixelY = mark.ny * imageLayout.height;
+                            // REVERTED markerStyle to your original logic for positioning
                             const markerStyle = {
-                                left: pixelX - MARKER_SIZE / 2,
-                                top: pixelY - MARKER_SIZE / 2,
+                                left: pixelX - MARKER_SIZE / 2, // Your original calculation
+                                top: pixelY - MARKER_SIZE / 2,  // Your original calculation
                              };
                             return (
                                 <View key={index} style={[styles.markerContainer, markerStyle]}>
-                                    {selectedItem?.defectDetails?.location === 'Interior' && <View style={styles.circle} />}
+                                    {initialDefectDetailsFromProp?.location === 'Interior' && <View style={styles.circle} />}
                                     <Text style={styles.xMark}>X</Text>
                                 </View>
                             );
                         })}
-                        {/* Optional: Add loading indicator if imageLayout is null */}
                         {!imageLayout && (
                             <View style={styles.loadingOverlay}>
-                                {/* You can put an ActivityIndicator or Text here */}
-                                <Text style={{color: 'white'}}>Loading Image...</Text>
+                                <ActivityIndicator size="large" color="white" />
+                                <Text style={styles.loadingText}>Loading Image...</Text>
                             </View>
                         )}
                     </TouchableOpacity>
@@ -185,25 +200,20 @@ export default function MarkModal({ visible, onClose, selectedItem, closeDefectM
     );
 }
 
-// --- ORIGINAL STYLES + Loading Overlay ---
+// --- Styles (Using the styles you provided in the prompt where you shared this MarkModal code) ---
 const styles = StyleSheet.create({
-    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
+    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }, // Original BG
     header: { fontSize: 20, fontWeight: 'bold', color: 'white', marginBottom: 10 },
     imageSelector: { flexDirection: 'row', justifyContent: 'space-around', width: '90%', marginBottom: 10, alignItems: 'center' },
-    imageButton: { backgroundColor: '#ffe6cc', padding: 15, paddingHorizontal: 40, borderRadius: 5 },
+    imageButton: { backgroundColor: '#ffe6cc', padding: 15, paddingHorizontal: 40, borderRadius: 5 }, // Original padding
     imageButtonText: { fontWeight: 'bold', color: 'black' },
-    image: { width: 500, height: 600, resizeMode: 'contain', backgroundColor: 'white' },
+    imageKeyText: {color:'white', marginHorizontal: 10, fontSize: 16, fontWeight: 'bold', textAlign: 'center', flexShrink: 1}, // Copied from my prev suggestion as it was good
+    image: { width: 500, height: 600, resizeMode: 'contain', backgroundColor: 'white' }, // *** REVERTED TO YOUR ORIGINAL SIZE ***
     markerContainer: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: MARKER_SIZE, height: MARKER_SIZE },
-    xMark: { fontSize: 16, fontWeight: 'bold', color: 'red' },
+    xMark: { fontSize: 16, fontWeight: 'bold', color: 'red' }, // Original font size
     circle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: 'black', position: 'absolute' },
-    closeButton: { marginTop: 20, backgroundColor: 'maroon', padding: 15, paddingHorizontal: 40, borderRadius: 5 },
+    closeButton: { marginTop: 20, backgroundColor: 'maroon', padding: 15, paddingHorizontal: 40, borderRadius: 5 }, // Original padding
     closeText: { fontWeight: 'bold', color: 'white' },
-    // Added simple overlay style
-    loadingOverlay: {
-        position: 'absolute',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    }
+    loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
+    loadingText: { color: 'white', marginTop: 10, fontSize: 12 }
 });

@@ -4,11 +4,11 @@ import {
     View, Text, Modal, StyleSheet, TextInput, Alert,
     TouchableOpacity, FlatList, LayoutAnimation, Platform, UIManager
 } from 'react-native';
-import CheckBox from 'react-native-checkbox'; // Ensure this is the checkbox component you intend to use
+import CheckBox from 'react-native-checkbox'; 
 import MarkModal from './MarkModal';
 import { ChecklistContext } from '../context/ChecklistContext';
-import { DefectTypeContext } from '../context/defectTypeContext'; // Import the new context
-import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
+import { DefectTypeContext } from '../context/defectTypeContext';
+import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles'; 
 
 if (Platform.OS === 'android') {
     if (UIManager.setLayoutAnimationEnabledExperimental) {
@@ -16,7 +16,9 @@ if (Platform.OS === 'android') {
     }
 }
 
-// --- CustomDropdown Component (Keep As Is) ---
+const BATTERY_ITEM_NAME_DEFECT_MODAL = "Battery clamps & terminal";
+const BATTERY_ITEM_SECTION_DEFECT_MODAL = "A";
+
 const CustomDropdown = ({
     label, options, selectedValue, onValueChange, isOpen, onHeaderPress
 }) => {
@@ -42,7 +44,6 @@ const CustomDropdown = ({
         return rows;
     };
 
-    // Use 2 columns for Major/Minor for better layout
     const numColumns = label === 'Severity' ? 2 : 3;
     const formattedOptions = formatRows(options, numColumns);
 
@@ -55,8 +56,7 @@ const CustomDropdown = ({
             </TouchableOpacity>
             {isOpen && (
                 <FlatList
-                    // Adjust style for fewer options if needed
-                    style={[localStyles.dropdownOptionsContainer, label === 'Severity' && { maxHeight: 80 } ]}
+                    style={[localStyles.dropdownOptionsContainer, label === 'Severity' && { maxHeight: 80 }]}
                     data={formattedOptions}
                     keyExtractor={(item, index) => item.key || String(index)}
                     renderItem={({ item }) => {
@@ -65,7 +65,7 @@ const CustomDropdown = ({
                         }
                         return (
                             <TouchableOpacity
-                                style={[localStyles.option, label === 'Severity' && { alignItems: 'center' }]} // Center Severity options
+                                style={[localStyles.option, label === 'Severity' && { alignItems: 'center' }]}
                                 onPress={() => handleOptionPress(item.value)}
                             >
                                 <CheckBox
@@ -83,106 +83,148 @@ const CustomDropdown = ({
         </View>
     );
 };
-// --- End CustomDropdown Component ---
 
 export default function DefectInfoModal({ defect, onClose }) {
-    // Use both contexts
     const { updateDefectDetails } = useContext(ChecklistContext);
-    const { categoryOptions, getTypeOptionsByCategory } = useContext(DefectTypeContext); // Get data/helpers from DefectTypeContext
+    const { categoryOptions, getTypeOptionsByCategory } = useContext(DefectTypeContext);
 
-    // --- State Initialization ---
     const [category, setCategory] = useState(defect.item.defectDetails?.category || '');
     const [type, setType] = useState(defect.item.defectDetails?.type || '');
     const [location, setLocation] = useState(defect.item.defectDetails?.location || '');
-    // --- NEW: State for Severity ---
     const [severity, setSeverity] = useState(defect.item.defectDetails?.severity || '');
-    // --- END NEW ---
     const [remarks, setRemarks] = useState(defect.item.defectDetails?.remarks || '');
-    const [marking, setMarking] = useState(false); // State for MarkModal visibility
+    
+    const isBatteryDefectItem = defect.item.name === BATTERY_ITEM_NAME_DEFECT_MODAL && defect.section === BATTERY_ITEM_SECTION_DEFECT_MODAL;
 
-    // --- State to control which dropdown is open ---
+    const getInitialMeasurementString = () => {
+        if (!isBatteryDefectItem) return '';
+        const valFromDetails = defect.item.defectDetails?.measurementValue;
+        const valFromItem = defect.item.measurementValue;
+        
+        if (valFromDetails != null) return String(valFromDetails);
+        if (valFromItem != null) return String(valFromItem);
+        return '';
+    };
+    const [measurementValueString, setMeasurementValueString] = useState(getInitialMeasurementString());
+
+    const [marking, setMarking] = useState(false);
+
     const getInitialActiveDropdown = () => {
         if (!category) return 'category';
         if (!type) return 'type';
         if (!location) return 'location';
-        // --- NEW: Check severity ---
         if (!severity) return 'severity';
-        // --- END NEW ---
-        return 'none'; // If all are filled, open none initially
+        return 'none';
     };
     const [activeDropdown, setActiveDropdown] = useState(getInitialActiveDropdown());
 
-    // --- Options Definitions ---
     const locationOptions = [
         { label: "Exterior", value: "Exterior" },
         { label: "Interior", value: "Interior" },
     ];
-    // --- NEW: Severity Options ---
     const severityOptions = [
         { label: "Major", value: "Major" },
         { label: "Minor", value: "Minor" },
     ];
-    // --- END NEW ---
 
-    const getTypeOptions = () => {
-        return getTypeOptionsByCategory(category);
-    };
+    const getTypeOptions = () => getTypeOptionsByCategory(category);
 
-    // --- Handlers ---
     const handleCategoryChange = (newCategory) => {
         setCategory(newCategory);
-        setType(''); // Reset subsequent fields
+        setType('');
         setLocation('');
         setSeverity('');
-        setActiveDropdown('type'); // Open type dropdown next
+        setActiveDropdown('type');
     };
 
     const handleTypeChange = (newType) => {
         setType(newType);
-        setLocation(''); // Reset subsequent fields
+        setLocation('');
         setSeverity('');
-        setActiveDropdown('location'); // Open Location dropdown next
+        setActiveDropdown('location');
     };
 
     const handleLocationChange = (newLocation) => {
         setLocation(newLocation);
-        setSeverity(''); // Reset subsequent fields
-        setActiveDropdown('severity'); // --- MODIFIED: Open Severity dropdown next ---
+        setSeverity('');
+        setActiveDropdown('severity');
     };
 
-    // --- NEW: Handler for Severity Change ---
     const handleSeverityChange = (newSeverity) => {
         setSeverity(newSeverity);
-        setActiveDropdown('none'); // Close Severity dropdown after selection (or focus remarks)
+        setActiveDropdown('none');
     };
-    // --- END NEW ---
 
     const handleDropdownHeaderPress = (dropdownName) => {
         setActiveDropdown(current => (current === dropdownName ? 'none' : dropdownName));
     };
 
+    const isMarkButtonDisabled = () => {
+        if (!category || !type || !location || !severity) return true;
+        if (isBatteryDefectItem) {
+            const trimmedMeasurement = measurementValueString.trim();
+            if (!trimmedMeasurement || isNaN(parseFloat(trimmedMeasurement))) {
+                return true;
+            }
+        }
+        return false;
+    };
+
     const handleMark = () => {
-        // --- MODIFIED: Added severity check ---
-        if (!category || !type || !location || !severity) {
-            Alert.alert('Missing Information', 'Please select Category, Type, Location, and Severity before marking.');
+        let missingFields = [];
+        if (!category) missingFields.push("Category");
+        if (!type) missingFields.push("Type");
+        if (!location) missingFields.push("Location");
+        if (!severity) missingFields.push("Severity");
+
+        let parsedBatteryFloat = null;
+        if (isBatteryDefectItem) {
+            const trimmedMeasurement = measurementValueString.trim();
+            if (!trimmedMeasurement) {
+                missingFields.push("Measured Value (Battery)");
+            } else {
+                parsedBatteryFloat = parseFloat(trimmedMeasurement);
+                if (isNaN(parsedBatteryFloat)) {
+                    missingFields.push("Valid Numeric Measured Value (Battery, e.g., 12.5)");
+                }
+            }
+        }
+
+        if (missingFields.length > 0) {
+            Alert.alert('Missing Information', `Please fill in the following fields correctly: ${missingFields.join(', ')}.`);
             return;
         }
-        // --- END MODIFIED ---
 
-        const itemId = defect.item.id;
-        const identifier = defect.item.id ? 'id' : 'name';
-
-        // --- MODIFIED: Added severity to the details object ---
-        updateDefectDetails(defect.section, defect.item[identifier], {
+        if (!defect.item.id) {
+            console.error("Defect item ID is missing in DefectInfoModal.");
+            Alert.alert("Error", "Defect item ID is missing. Cannot update details.");
+            return;
+        }
+        
+        const defectDetailsPayload = {
             category,
             type,
             location,
-            severity, // <-- ADDED
+            severity,
             remarks,
             marks: defect.item.defectDetails?.marks || [],
-        });
-        // --- END MODIFIED ---
+        };
+
+        if (isBatteryDefectItem) {
+            defectDetailsPayload.measurementValue = parsedBatteryFloat;
+        }
+
+        updateDefectDetails(defect.section, defect.item.id, defectDetailsPayload);
         setMarking(true);
+    };
+
+    const showRemarksInput = () => {
+        if (!severity) return false;
+        if (isBatteryDefectItem) {
+            const trimmedMeasurement = measurementValueString.trim();
+            return !!trimmedMeasurement && !isNaN(parseFloat(trimmedMeasurement));
+        }
+        return true;
     };
 
     return (
@@ -194,13 +236,11 @@ export default function DefectInfoModal({ defect, onClose }) {
         >
             <View style={localStyles.modalContainer}>
                 <View style={localStyles.modalContent}>
-
                     <Text style={localStyles.title}>Defect Information</Text>
                     <View style={localStyles.infoBox}>
                         <Text style={localStyles.infoTitle}>Section {defect.section} - {defect.item.name}</Text>
                     </View>
 
-                    {/* Category Dropdown */}
                     <CustomDropdown
                         label="Category"
                         options={categoryOptions}
@@ -210,7 +250,6 @@ export default function DefectInfoModal({ defect, onClose }) {
                         onHeaderPress={() => handleDropdownHeaderPress('category')}
                     />
 
-                    {/* Type Dropdown */}
                     {category && (
                         <CustomDropdown
                             label="Type"
@@ -222,20 +261,18 @@ export default function DefectInfoModal({ defect, onClose }) {
                         />
                     )}
 
-                    {/* Location Dropdown */}
                     {type && (
-                         <CustomDropdown
-                             label="Location"
-                             options={locationOptions}
-                             selectedValue={location}
-                             onValueChange={handleLocationChange}
-                             isOpen={activeDropdown === 'location'}
-                             onHeaderPress={() => handleDropdownHeaderPress('location')}
+                        <CustomDropdown
+                            label="Location"
+                            options={locationOptions}
+                            selectedValue={location}
+                            onValueChange={handleLocationChange}
+                            isOpen={activeDropdown === 'location'}
+                            onHeaderPress={() => handleDropdownHeaderPress('location')}
                         />
                     )}
 
-                    {/* --- NEW: Severity Dropdown --- */}
-                    {location && ( // Show after Location is selected
+                    {location && (
                         <CustomDropdown
                             label="Severity"
                             options={severityOptions}
@@ -245,27 +282,36 @@ export default function DefectInfoModal({ defect, onClose }) {
                             onHeaderPress={() => handleDropdownHeaderPress('severity')}
                         />
                     )}
-                    {/* --- END NEW --- */}
-
-                     {/* Remarks Input */}
-                    {/* --- MODIFIED: Show after Severity is selected --- */}
-                    {severity && (
-                       <>
-                         <Text style={localStyles.label}>Remarks:</Text>
-                         <TextInput
-                            style={[commonStyles.textInput, localStyles.remarksInput]}
-                            placeholder="Enter remarks (optional)"
-                            placeholderTextColor={COLORS.grey}
-                            value={remarks}
-                            onChangeText={setRemarks}
-                            multiline={true}
-                            numberOfLines={3}
-                        />
-                      </>
+                    
+                    {isBatteryDefectItem && severity && (
+                        <>
+                            <Text style={localStyles.label}>Measured Value (Battery):</Text>
+                            <TextInput
+                                style={[commonStyles.textInput, localStyles.measurementInput]}
+                                placeholder="e.g., 12.5"
+                                placeholderTextColor={COLORS.grey}
+                                value={measurementValueString}
+                                onChangeText={setMeasurementValueString}
+                                keyboardType="numeric" // Or "decimal-pad"
+                            />
+                        </>
                     )}
-                    {/* --- END MODIFIED --- */}
+                    
+                    {showRemarksInput() && (
+                        <>
+                            <Text style={localStyles.label}>Remarks:</Text>
+                            <TextInput
+                                style={[commonStyles.textInput, localStyles.remarksInput]}
+                                placeholder="Enter remarks (optional)"
+                                placeholderTextColor={COLORS.grey}
+                                value={remarks}
+                                onChangeText={setRemarks}
+                                multiline={true}
+                                numberOfLines={3}
+                            />
+                        </>
+                    )}
 
-                    {/* Action Buttons */}
                     <View style={commonStyles.footerActionContainer}>
                         <TouchableOpacity
                             style={[commonStyles.actionButtonSecondary, localStyles.modalButton]}
@@ -274,38 +320,39 @@ export default function DefectInfoModal({ defect, onClose }) {
                             <Text style={[commonStyles.actionButtonText, localStyles.modalButtonText]}>Back</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            // --- MODIFIED: Added severity check to disabled condition ---
                             style={[
                                 commonStyles.actionButton,
                                 localStyles.modalButton,
-                                (!category || !type || !location || !severity) ? commonStyles.actionButtonDisabled : {}
+                                isMarkButtonDisabled() ? commonStyles.actionButtonDisabled : {}
                             ]}
                             onPress={handleMark}
-                            disabled={!category || !type || !location || !severity}
-                            // --- END MODIFIED ---
+                            disabled={isMarkButtonDisabled()}
                         >
                             <Text style={[
                                 commonStyles.actionButtonPrimaryText,
                                 localStyles.modalButtonText,
-                                // --- MODIFIED: Added severity check to disabled text style ---
-                                (!category || !type || !location || !severity) ? FONT_SIZES.large : {}
-                                // --- END MODIFIED ---
-                                ]}>Mark</Text>
+                                isMarkButtonDisabled() ? (commonStyles.actionButtonModalDisabled || { opacity: 0.5 }) : {}
+                            ]}>Mark</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
             </View>
 
-            {/* Mark Modal */}
             {marking && (
                 <MarkModal
                     visible={marking}
                     onClose={() => setMarking(false)}
                     selectedItem={{
                         ...defect.item,
-                        // --- MODIFIED: Include severity in data passed to MarkModal if needed ---
-                        defectDetails: { category, type, location, severity, remarks, marks: defect.item.defectDetails?.marks || [] },
-                        // --- END MODIFIED ---
+                        defectDetails: { 
+                            category, 
+                            type, 
+                            location, 
+                            severity, 
+                            remarks, 
+                            marks: defect.item.defectDetails?.marks || [],
+                            ...(isBatteryDefectItem && { measurementValue: parseFloat(measurementValueString.trim()) }) // ensure float
+                        },
                     }}
                     closeDefectModal={onClose}
                 />
@@ -314,7 +361,6 @@ export default function DefectInfoModal({ defect, onClose }) {
     );
 }
 
-// --- Styles (Keep As Is) ---
 const localStyles = StyleSheet.create({
     modalContainer: {
         flex: 1,
@@ -328,7 +374,7 @@ const localStyles = StyleSheet.create({
         padding: PADDING.large,
         backgroundColor: COLORS.white,
         borderRadius: 10,
-        maxHeight: '90%',
+        maxHeight: '90%', 
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2, },
         shadowOpacity: 0.25,
@@ -365,15 +411,18 @@ const localStyles = StyleSheet.create({
     },
     remarksInput: {
         minHeight: 80,
-        height: 'auto',
+        height: 'auto', 
         textAlignVertical: 'top',
-        // Make sure textInput style from commonStyles includes border, padding etc.
+    },
+    measurementInput: {
+        minHeight: 40, 
+        textAlignVertical: 'center', 
     },
     modalButton: {
         paddingVertical: PADDING.medium,
         paddingHorizontal: PADDING.large,
         minWidth: 100,
-        flex: 0.45,
+        flex: 0.45, 
         alignItems: 'center',
     },
     modalButtonText: {
@@ -396,11 +445,11 @@ const localStyles = StyleSheet.create({
         fontSize: FONT_SIZES.medium,
         fontWeight: '600',
         color: COLORS.secondary,
-        flexShrink: 1,
+        flexShrink: 1, 
         marginRight: MARGIN.small,
     },
     dropdownOptionsContainer: {
-        maxHeight: 150, // Adjust as needed
+        maxHeight: 350, 
         borderWidth: 1,
         borderColor: COLORS.lightGrey,
         backgroundColor: COLORS.white,
@@ -412,16 +461,16 @@ const localStyles = StyleSheet.create({
         paddingHorizontal: PADDING.small,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.divider,
-        flex: 1,
-        alignItems: 'flex-start', // Align checkbox+label to the left
-        margin: 2, // Small margin around each item
-        backgroundColor: COLORS.white, // Ensure background for touchable area
+        flex: 1, 
+        alignItems: 'flex-start', 
+        margin: 2, 
+        backgroundColor: COLORS.white, 
         borderRadius: 3,
     },
     optionLabel: {
         fontSize: FONT_SIZES.medium,
         color: COLORS.secondary,
-        marginLeft: MARGIN.small, // Space between checkbox and label
+        marginLeft: MARGIN.small, 
     },
     itemInvisible: {
         backgroundColor: 'transparent',

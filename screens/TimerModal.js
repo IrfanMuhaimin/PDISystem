@@ -1,18 +1,17 @@
-// TimerModal.js
 import React, { useState, useEffect, useContext } from 'react';
 import { View, Text, Modal, StyleSheet, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChecklistContext } from '../context/ChecklistContext'; // Import ChecklistContext
+import { ChecklistContext } from '../context/ChecklistContext';
+import commonStyles, { COLORS, FONT_SIZES, MARGIN, PADDING } from '../styles/commonStyles';
 
 const TimerModal = ({ visible, onClose, carInfo }) => {
   const navigation = useNavigation();
-  const { updateCarInfo } = useContext(ChecklistContext); // Get updateCarInfo from context
+  const { updateCarInfo } = useContext(ChecklistContext);
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
 
   useEffect(() => {
     if (!visible) {
-      // Reset timer when modal is closed
       setStartTime(null);
       setEndTime(null);
     }
@@ -20,10 +19,10 @@ const TimerModal = ({ visible, onClose, carInfo }) => {
 
   const handleStart = () => {
     const now = new Date();
-    updateCarInfo({ ...carInfo, startTime: now }); // Update startTime in context
-    setStartTime(now); //set start time in local state
+    updateCarInfo({ ...carInfo, startTime: now });
+    setStartTime(now);
     navigation.navigate('Checklist');
-    onClose(); // Close the modal after navigation
+    onClose();
   };
 
   const formatTime = (date) => {
@@ -41,19 +40,19 @@ const TimerModal = ({ visible, onClose, carInfo }) => {
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.modalText}>Start PDI</Text>
-          <Text>Model/Variant: {carInfo.model} / {carInfo.variant}</Text>
-          <Text>Engine No: {carInfo.engine_no}</Text>
-          <Text>Chassis No: {carInfo.chassis_no}</Text>
-          <Text>Colour Code: {carInfo.colour_code}</Text>
-          <Text>Entry Date: {carInfo.entry_date}</Text>
-          <Text>Confirm to start PDI? Timer will start.</Text>
+          <Text style={commonStyles.textRegular}>Model/Variant: {carInfo.model} / {carInfo.variant}</Text>
+          <Text style={commonStyles.textRegular}>Engine No: {carInfo.engine_no}</Text>
+          <Text style={commonStyles.textRegular}>Chassis No: {carInfo.chassis_no}</Text>
+          <Text style={commonStyles.textRegular}>Colour Code: {carInfo.colour_code}</Text>
+          <Text style={commonStyles.textRegular}>Entry Date: {carInfo.entry_date}</Text>
+          <Text style={commonStyles.infoText}>Confirm to start PDI? Timer will start.</Text>
 
-          {endTime ? (
+          {endTime && (
             <>
-              <Text>Start Time: {formatTime(startTime)}</Text>
-              <Text>End Time: {formatTime(endTime)}</Text>
+              <Text style={commonStyles.textRegular}>Start Time: {formatTime(startTime)}</Text>
+              <Text style={commonStyles.textRegular}>End Time: {formatTime(endTime)}</Text>
             </>
-          ) : null}
+          )}
 
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -77,55 +76,57 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
   modalView: {
-    margin: 100,
-    backgroundColor: 'white',
+    margin: MARGIN.large,
+    backgroundColor: COLORS.white,
     borderRadius: 20,
-    padding: 25,
+    padding: PADDING.large + 5,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 5,
   },
   modalText: {
-    marginBottom: 15,
+    marginBottom: MARGIN.medium,
     textAlign: 'center',
-    fontSize: 23,
+    fontSize: FONT_SIZES.large + 5,
     fontWeight: 'bold',
+    color: COLORS.secondary,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginTop: 20,
+    marginTop: MARGIN.large,
   },
   closeButton: {
-    backgroundColor: '#f5f5f5',
-    paddingHorizontal: 35,
-    paddingVertical: 15,
+    backgroundColor: COLORS.veryLightGrey,
+    paddingHorizontal: PADDING.buttonHorizontalOriginal,
+    paddingVertical: PADDING.large,
     borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   startButton: {
-    backgroundColor: '#ef5b2d',
-    paddingHorizontal: 35,
-    paddingVertical: 15,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: PADDING.buttonHorizontalOriginal,
+    paddingVertical: PADDING.large,
     borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closeText: {
-    color: 'black',
+    fontSize: FONT_SIZES.large,
+    color: COLORS.secondary,
     fontWeight: 'bold',
     textAlign: 'center',
-    fontSize: 18,
   },
   startText: {
-    color: 'white',
+    fontSize: FONT_SIZES.large,
+    color: COLORS.white,
     fontWeight: 'bold',
     textAlign: 'center',
-    fontSize: 18,
   },
 });
 

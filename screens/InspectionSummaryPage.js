@@ -2,19 +2,11 @@
 import React, { useEffect, useState } from 'react';
 import {
     View, Text, ScrollView, StyleSheet, TouchableOpacity,
-    ActivityIndicator, Platform // Removed SafeAreaView, Button, Modal
+    ActivityIndicator, Platform
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// --- Import ScreenWrapper ---
-// *** ADJUST PATH IF NEEDED ***
 import ScreenWrapper from '../styles/flowstudiosbg.js';
-
-// --- Import Common Styles & Constants ---
-// *** ADJUST PATH IF NEEDED ***
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles.js';
-
-// Removed DefectInfoModal import as it wasn't used in the provided code
 
 export default function InspectionSummaryPage({ navigation }) {
     // State variables remain the same
@@ -157,60 +149,48 @@ export default function InspectionSummaryPage({ navigation }) {
 
     return (
         <ScreenWrapper
-            showHeader={true} // Use the standard header from ScreenWrapper
-            showFooter={true} // Use the standard footer from ScreenWrapper
-            enableScrollView={false} // We will use our own ScrollView below
-            enableKeyboardAvoidingView={Platform.OS === 'ios'} // Good practice
+            showHeader={true}
+            showFooter={true}
+            enableScrollView={false}
+            enableKeyboardAvoidingView={Platform.OS === 'ios'}
         >
-            {/* --- Main Scrollable Content --- */}
             <ScrollView
                 style={localStyles.scrollView}
                 contentContainerStyle={localStyles.scrollContentContainer}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* Page Header */}
                 <Text style={commonStyles.pageHeader}>Final Inspection Summary</Text>
-
-                {/* Render Loading/Error or Summary Content */}
                 {renderSummaryContent()}
 
             </ScrollView>
-            {/* --- End Scrollable Content --- */}
-
-            {/* --- Fixed Footer Action Buttons --- */}
             <View style={commonStyles.footerActionContainer}>
-                {/* Only one button needed here */}
                 <TouchableOpacity
-                    style={commonStyles.actionButtonSecondary} // Use common style for Back
+                    style={commonStyles.actionButtonSecondary}
                     onPress={() => navigation.goBack()}
                 >
                     <Text style={commonStyles.actionButtonText}>Back</Text>
                 </TouchableOpacity>
-                {/* Add another button here if needed, using commonStyles.actionButton */}
             </View>
-            {/* --- End Footer Action Buttons --- */}
 
         </ScreenWrapper>
     );
 }
 
-// --- Local Styles (Generalized with Theme Constants) ---
 const localStyles = StyleSheet.create({
-    // --- Layout & Core ---
     scrollView: {
-        flex: 1, // Takes available space
+        flex: 1,
     },
     scrollContentContainer: {
         paddingHorizontal: PADDING.medium,
-        paddingTop: PADDING.small, // Less top padding as header is above
-        paddingBottom: PADDING.large, // Space at bottom of scroll
+        paddingTop: PADDING.small,
+        paddingBottom: PADDING.large,
     },
-    centeredMessageContainer: { // For Loading/Error states
-        flex: 1, // Ensure it takes height if ScrollView is empty
+    centeredMessageContainer: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
         padding: PADDING.large,
-        minHeight: 200, // Give it some minimum height
+        minHeight: 200,
     },
     loadingText: {
         marginTop: MARGIN.medium,
@@ -225,37 +205,36 @@ const localStyles = StyleSheet.create({
         paddingHorizontal: PADDING.medium,
     },
 
-    // --- Summary Sections & Boxes ---
+
     section: {
-        marginBottom: MARGIN.large, // Was 10 -> use theme large margin
+        marginBottom: MARGIN.large,
     },
     sectionTitle: {
-        fontSize: FONT_SIZES.xlarge, // Was 22/25 -> use theme xl
+        fontSize: FONT_SIZES.xlarge,
         fontWeight: 'bold',
-        marginBottom: MARGIN.small, // Was 5 -> use theme small margin
-        color: COLORS.secondary, // Use theme secondary color
+        marginBottom: MARGIN.small,
+        color: COLORS.secondary,
         borderBottomWidth: 1,
         borderBottomColor: COLORS.divider,
         paddingBottom: PADDING.xsmall,
     },
     summaryBox: {
-        backgroundColor: COLORS.white, // Was #fff
-        borderColor: COLORS.border,    // Was #000 -> use theme border
+        backgroundColor: COLORS.white,
+        borderColor: COLORS.border,
         borderWidth: 1,
-        borderRadius: 8,               // Was 5 -> use slightly rounded
-        padding: PADDING.medium,       // Was 10 -> use theme medium padding
-        marginTop: MARGIN.xsmall,      // Was 5
-        shadowColor: COLORS.black,     // Add subtle shadow
+        borderRadius: 8, 
+        padding: PADDING.medium,
+        marginTop: MARGIN.xsmall,
+        shadowColor: COLORS.black,
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
         shadowRadius: 2,
         elevation: 2,
     },
     summaryText: {
-        fontSize: FONT_SIZES.large, // Was 16 -> use theme large
-        color: COLORS.secondary,    // Use theme text color
-        marginBottom: MARGIN.small, // Was 5 -> use theme small margin
-        lineHeight: FONT_SIZES.large * 1.4, // Improve line height
+        fontSize: FONT_SIZES.large,
+        color: COLORS.secondary,
+        marginBottom: MARGIN.small,
+        lineHeight: FONT_SIZES.large * 1.4,
     },
-    // Removed redundant styles: appBar, appBarTitle, container, header, button, buttonBack, buttonText, footer
 });

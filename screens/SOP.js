@@ -41,7 +41,7 @@ export default function SOP({ navigation }) { // Keep navigation prop for Back b
 
     // Data (can be fetched dynamically later if needed)
     const models = ['Xpander'];
-    const variants = ['BASE', 'CLASS'];
+    const variants = ['BASE', 'PLUS'];
 
     // --- PDF Handler (Download and Share) ---
     const handleViewPDF = async () => {

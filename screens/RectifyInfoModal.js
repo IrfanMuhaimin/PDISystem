@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/FontAwesome';
+import { Picker } from '@react-native-picker/picker';
+import { Checkbox } from 'react-native-paper';
 
 // Import theme constants and common styles
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
@@ -16,6 +18,17 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
     const [date, setDate] = useState(new Date());
     const [showPicker, setShowPicker] = useState(false);
     const [remark, setRemark] = useState(''); // Remark state
+    const [tempOrganization, setTempOrganization] = useState('');
+    const [otherOrganization, setOtherOrganization] = useState('');
+
+    const [closed, setClosed] = useState(false);
+
+    useEffect(() => {
+        if (tempOrganization === 'Others') {
+            // Don't immediately set organization, just trigger other input
+            setOtherOrganization(''); // Optional: reset previous
+        }
+    }, [tempOrganization]);
 
     useEffect(() => {
         if (visible) {
@@ -40,7 +53,8 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
             // --- MODIFICATION END ---
             return;
         }
-        onConfirm(staffName.trim(), staffNo.trim(), remark.trim(), date.toISOString());
+        console.log(`Closed in handleConfirmPress: ${closed}`);
+        onConfirm(staffName.trim(), staffNo.trim(), remark.trim(), date.toISOString(), closed);
     };
 
     const formatDateForDisplay = (dateObj) => {
@@ -52,7 +66,7 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
         const currentDate = selectedDate || date;
         setShowPicker(false);
         if (event.type === 'set') {
-             setDate(currentDate);
+            setDate(currentDate);
         }
     };
 
@@ -61,6 +75,11 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
     }
 
     const defectInfo = item.allDefects?.[0];
+
+    // Picker items
+    const organizationOptions = [
+        "HAMM", "HTS", "MMCMM", "MKM", "STMM", "PECCA", "JVC", "MMM", "Others"
+    ];
 
     return (
         <Modal
@@ -78,22 +97,22 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
 
                     {/* Defect Info (Keep as is) */}
                     <View style={styles.defectInfoSection}>
-                       <Text style={styles.defectInfoLabel}>Defect:</Text>
-                       <Text style={styles.defectInfoText}> {(item.section ? `${getSectionLetter(item.section)} - ` : '') + item.name} </Text>
-                       {defectInfo && (
+                        <Text style={styles.defectInfoLabel}>Defect:</Text>
+                        <Text style={styles.defectInfoText}> {(item.section ? `${getSectionLetter(item.section)} - ` : '') + item.name} </Text>
+                        {defectInfo && (
                             <>
-                               <Text style={styles.defectInfoText}>Category: {defectInfo.category || 'N/A'}</Text>
-                               <Text style={styles.defectInfoText}>Type: {defectInfo.type || 'N/A'}</Text>
-                               <Text style={styles.defectInfoText}>Severity: {defectInfo.severity || 'N/A'}</Text>
+                                <Text style={styles.defectInfoText}>Category: {defectInfo.category || 'N/A'}</Text>
+                                <Text style={styles.defectInfoText}>Type: {defectInfo.type || 'N/A'}</Text>
+                                <Text style={styles.defectInfoText}>Severity: {defectInfo.severity || 'N/A'}</Text>
                             </>
-                       )}
+                        )}
                     </View>
 
                     {/* Staff Name Input (Keep as is) */}
-                    <Text style={styles.inputLabel}>Staff Name:</Text>
+                    <Text style={styles.inputLabel}>Staff Name (Staff No):</Text>
                     <TextInput
                         style={styles.input}
-                        placeholder="Enter Staff Name"
+                        placeholder="e.g Haris (12345)"
                         placeholderTextColor={COLORS.lightGrey}
                         value={staffName}
                         onChangeText={setStaffName}
@@ -101,14 +120,60 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
                     />
 
                     {/* Staff No Input (Keep as is) */}
-                    <Text style={styles.inputLabel}>Staff No:</Text>
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Enter Staff No"
-                        placeholderTextColor={COLORS.lightGrey}
-                        value={staffNo}
-                        onChangeText={setStaffNo}
-                     />
+
+                    <Text style={styles.inputLabel}>Organization:</Text>
+                    <View style={styles.pickerContainer}>
+                        <Picker
+                            selectedValue={tempOrganization}
+                            onValueChange={(value) => {
+                                setTempOrganization(value);
+                                if (value !== 'Others') {
+                                    setStaffNo(value);        // ✅ Only update the real state here
+                                    setOtherOrganization('');
+                                }
+                            }}
+                            style={styles.picker}
+                        >
+                            <Picker.Item label="Choose Organization" value="" enabled={false} />
+                            <Picker.Item label="HAMM" value="HAMM" />
+                            <Picker.Item label="HTS" value="HTS" />
+                            <Picker.Item label="MMCMM" value="MMCMM" />
+                            <Picker.Item label="MKM" value="MKM" />
+                            <Picker.Item label="STMM" value="STMM" />
+                            <Picker.Item label="PECCA" value="PECCA" />
+                            <Picker.Item label="JVC" value="JVC" />
+                            <Picker.Item label="MMM" value="MMM" />
+                            <Picker.Item label="Others" value="Others" />
+                        </Picker>
+                    </View>
+
+                    {tempOrganization === 'Others' && (
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter organization"
+                            placeholderTextColor="#aaa"
+                            value={otherOrganization}
+                            onChangeText={(text) => {
+                                setOtherOrganization(text);
+                                setStaffNo(text);  // ✅ Real org name only set here, once stable
+                            }}
+                        />
+                    )}
+
+                    {defectInfo.severity === 'Minor' && (
+                        <>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 5 }}>
+                                    <Text style={styles.inputLabel}>Closed:</Text>
+                                    <Checkbox
+                                        status={closed ? 'checked' : 'unchecked'}
+                                        onPress={() => setClosed(!closed)}
+                                        color="#ef5b2d"
+                                    />
+                                </View>
+                            </View>
+                        </>
+                    )}
 
                     {/* Date Section (Keep as is) */}
                     <Text style={styles.inputLabel}>Rectification Date:</Text>
@@ -235,6 +300,8 @@ const styles = StyleSheet.create({
     input: {
         ...commonStyles.textInput,
     },
+    pickerContainer: { borderWidth: 1, borderColor: COLORS.lightGrey, borderRadius: 5, backgroundColor: COLORS.white, marginBottom: MARGIN.medium, minHeight: 50, justifyContent: 'center', },
+    picker: { marginVertical: 0, height: 55, width: '100%', color: COLORS.secondary, },
     remarkInput: {
         height: 90,
         textAlignVertical: 'top',
@@ -265,7 +332,7 @@ const styles = StyleSheet.create({
     },
     modalButtonBase: { // Base styles - applied always
         borderRadius: 8,
-        paddingVertical: PADDING.large,
+        paddingVertical: PADDING.medium,
         paddingHorizontal: PADDING.xlarge,
         minWidth: 100,
         alignItems: 'center',
