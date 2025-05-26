@@ -3,25 +3,25 @@ import React, { createContext } from 'react';
 
 // Define the defect data structure
 const defectData = {
-    Painting: [
+    PAINTING: [
         "Scratch", "Chipping", "Line Mark", "Peel Off", "Paint Patching",
         "Rework Visible", "Thin Paint", "Off Colour", "Paint Fault", "Base Mark",
         "Paint Hole", "Sand Grove", "Sanding Mark", "Paint Wavy", "Dent",
         "Hump", "Bend", "Paint Crack", "Rusty", "Touch Up Mark",
         "Paint Touching", "Paint Popping", "Stain Mark", "Acid Mark", "Bird Drop",
-        "Dirty"
+        "Dirty", "Orange Peel",
     ],
-    Mechanical: [
+    MECHANICAL: [
         "Stain Mark", "Scratch", "Not Align", "Jerking & Noise", "Poor Fit",
         "Wrinkle", "Damaged", "Rusty", "Rework Visible", "Crack",
         "Over Spray", "Bulging", "Over Tighten", "Missing", "Detached",
         "Torn", "Stagnant Water", "Bubble", "Not Tighten", "Gap",
         "Not Function", "Broken", "Folded", "Hump", "Dirty",
         "Fungus & Rusty", "Glue Mark", "Spot Mark", "Abnormal", "Bird Drop",
-        "Wet"
+        "Wet", "Abnormal Noise",
     ],
-    Electrical: [
-        "Flat", "Malfunction"
+    ELECTRICAL: [
+        "Flat", "Malfunction", "Audio Blank", "No Signal",
     ]
 };
 

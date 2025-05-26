@@ -43,6 +43,7 @@ export const RectifyProvider = ({ children }) => {
       rectifierName: item.rectifierName || null,
       rectifierNo: item.rectifierNo || null,
       rectificationDate: item.rectificationDate || null,
+      closed: item.closed || false,
       remark: item.remark || null,
     }));
 
@@ -63,7 +64,8 @@ export const RectifyProvider = ({ children }) => {
 
   // *** RENAMED & CORRECTED: Sets details AND marks as rectified ***
   // Updates an item with details and marks it as rectified.
-  const rectifyItemWithDetails = useCallback((itemId, { name, no, remark, date }) => {
+  const rectifyItemWithDetails = useCallback((itemId, { name, no, remark, date, closed }) => {
+    console.log(`Closed: ${closed} `);
     console.log(`[RectifyContext] Rectifying item ${itemId} with details`);
     setRectifyItems(prevItems =>
       prevItems.map(item =>
@@ -74,6 +76,7 @@ export const RectifyProvider = ({ children }) => {
               rectifierName: name,
               rectifierNo: no,
               rectificationDate: date, // Should be ISO string from modal
+              closed: closed || false,
               remark: remark || null,
             }
           : item // Return other items unchanged
@@ -94,6 +97,7 @@ export const RectifyProvider = ({ children }) => {
               rectifierName: null, // Clear details
               rectifierNo: null,
               rectificationDate: null,
+              closed: false,
               remark: null,
             }
           : item // Return other items unchanged

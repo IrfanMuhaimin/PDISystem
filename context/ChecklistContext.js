@@ -1,10 +1,14 @@
 // ChecklistContext.js
 import React, { createContext, useState, useEffect } from 'react';
 
+// Helper to identify the battery item
+export const BATTERY_ITEM_NAME = "Battery clamps & terminal";
+export const BATTERY_ITEM_SECTION = "A";
+
 // Sample checklist items by section
 const initialChecklistPlus = {
     A: [
-        { id: 112, section: "A", name: "Battery clamps & terminal", checked: false, defect: false },
+        { id: 112, section: "A", name: "Battery clamps & terminal", checked: false, defect: false, measurementValue: null },
         { id: 113, section: "A", name: "Engine oil level", checked: false, defect: false },
         { id: 114, section: "A", name: "Brake Fluid reservoir level", checked: false, defect: false },
         { id: 115, section: "A", name: "Coolant reservoir level", checked: false, defect: false },
@@ -68,16 +72,16 @@ const initialChecklistPlus = {
         },
         { id: 158, section: "B", name: "MGDA (Display Audio)", checked: false, defect: false
         },
-        { id: 159, section: "B", name: "Fr Rh Carpet Mat", checked: false, defect: false
-        },
+        // { id: 159, section: "B", name: "Fr Rh Carpet Mat", checked: false, defect: false
+        // },
         { id: 160, section: "B", name: "All Round Monitor (ARM)", checked: false, defect: false
         },
         { id: 161, section: "B", name: "Front DVR", checked: false, defect: false
         },
         { id: 162, section: "B", name: "Fr Rh Door Visor", checked: false, defect: false
         },
-        { id: 163, section: "B", name: "Wireless Charger", checked: false, defect: false
-        },
+        // { id: 163, section: "B", name: "Wireless Charger", checked: false, defect: false
+        // },
     ],
     C: [
         { id: 164, section: "C", name: "Rr Rh Door", checked: false, defect: false
@@ -90,22 +94,22 @@ const initialChecklistPlus = {
         },
         { id: 168, section: "C", name: "2nd Row Rh Passenger Seat", checked: false, defect: false
         },
-        { id: 169, section: "C", name: "Rr Lh Power window switch operation", checked: false, defect: false
+        { id: 169, section: "C", name: "Rr Lh Power window switch operation", checked: false, defect: false // Should be Rr Rh? Original: Rr Lh
         },
         { id: 170, section: "C", name: "Rr Rh Air Conditioner / Vents / blower", checked: false, defect: false
         },
         { id: 171, section: "C", name: "Mid Rh Seat belt function", checked: false, defect: false
         },
-        { id: 172, section: "C", name: "Mid Rh Carpet Mat", checked: false, defect: false
-        },
+        // { id: 172, section: "C", name: "Mid Rh Carpet Mat", checked: false, defect: false
+        // },
         { id: 173, section: "C", name: "Sticker (PDI OK)", checked: false, defect: false
         },
         { id: 174, section: "C", name: "Dual USB Data Port", checked: false, defect: false
         },
-        { id: 175, section: "C", name: "Safety Triangle", checked: false, defect: false
-        },
-        { id: 176, section: "C", name: "Organizer Booklet", checked: false, defect: false
-        },
+        // { id: 175, section: "C", name: "Safety Triangle", checked: false, defect: false
+        // },
+        // { id: 176, section: "C", name: "Organizer Booklet", checked: false, defect: false
+        // },
         { id: 177, section: "C", name: "Rr Rh Door Visor", checked: false, defect: false
         },
     ],
@@ -186,8 +190,8 @@ const initialChecklistPlus = {
         },
         { id: 214, section: "E", name: "Mid Ctr Seat belt function", checked: false, defect: false
         },
-        { id: 215, section: "E", name: "Mid Lh Carpet Mat", checked: false, defect: false
-        },
+        // { id: 215, section: "E", name: "Mid Lh Carpet Mat", checked: false, defect: false
+        // },
         { id: 216, section: "E", name: "Rr Lh Door Visor", checked: false, defect: false
         },
     ],
@@ -208,8 +212,8 @@ const initialChecklistPlus = {
         },
         { id: 224, section: "F", name: "Fr Lh Passenger Seat", checked: false, defect: false
         },
-        { id: 225, section: "F", name: "Fr Lh Carpet Mat", checked: false, defect: false
-        },
+        // { id: 225, section: "F", name: "Fr Lh Carpet Mat", checked: false, defect: false
+        // },
         { id: 226, section: "F", name: "Fr Lh Power window switch operation", checked: false, defect: false
         },
         { id: 227, section: "F", name: "Passenger Sunvisor", checked: false, defect: false
@@ -218,8 +222,8 @@ const initialChecklistPlus = {
         },
         { id: 229, section: "F", name: "Fr Lh Air Conditioner / Vents / blower", checked: false, defect: false
         },
-        { id: 230, section: "F", name: "Child lock function", checked: false, defect: false
-        },
+        // { id: 230, section: "F", name: "Child lock function", checked: false, defect: false
+        // },
         { id: 231, section: "F", name: "Fr Lh Door Visor", checked: false, defect: false
         },
     ],
@@ -231,13 +235,14 @@ const initialChecklistPlus = {
         { id: 234, section: "Overall", name: "Leatherrette Cover", checked: false, defect: false
         },
         { id: 235, section: "Overall", name: "Scuff Plate", checked: false, defect: false
-        }
+        },
+        { id: 236, section: "Overall", name: "Loose Items", checked: false, defect: false}
     ]
 };
 
 const initialChecklistBase = {
     A: [
-        { id: 1, section: "A", name: "Battery clamps & terminal", checked: false, defect: false },
+        { id: 1, section: "A", name: "Battery clamps & terminal", checked: false, defect: false, measurementValue: null },
         { id: 2, section: "A", name: "Engine oil level", checked: false, defect: false },
         { id: 3, section: "A", name: "Brake Fluid reservoir level", checked: false, defect: false },
         { id: 4, section: "A", name: "Coolant reservoir level", checked: false, defect: false },
@@ -286,7 +291,7 @@ const initialChecklistBase = {
         { id: 45, section: "B", name: "Engine startability", checked: false, defect: false },
         { id: 46, section: "B", name: "Fr Rh Door Glasses appearance", checked: false, defect: false },
         { id: 47, section: "B", name: "MGDA (Display Audio)", checked: false, defect: false },
-        { id: 48, section: "B", name: "Fr Rh Carpet Mat", checked: false, defect: false },
+        // { id: 48, section: "B", name: "Fr Rh Carpet Mat", checked: false, defect: false },
     ],
     C: [
         { id: 49, section: "C", name: "Rr Rh Door", checked: false, defect: false },
@@ -296,11 +301,11 @@ const initialChecklistBase = {
         { id: 53, section: "C", name: "Rr Rh Power window switch operation", checked: false, defect: false },
         { id: 54, section: "C", name: "Rr Rh Air Conditioner / Vents / blower", checked: false, defect: false },
         { id: 55, section: "C", name: "Mid Rh Seat belt function", checked: false, defect: false },
-        { id: 56, section: "C", name: "Mid Rh Carpet Mat", checked: false, defect: false },
+        // { id: 56, section: "C", name: "Mid Rh Carpet Mat", checked: false, defect: false },
         { id: 57, section: "C", name: "Sticker (PDI OK)", checked: false, defect: false },
         { id: 58, section: "C", name: "Dual USB Data Port", checked: false, defect: false },
-        { id: 59, section: "C", name: "Safety Triangle", checked: false, defect: false },
-        { id: 60, section: "C", name: "Organizer Booklet", checked: false, defect: false },
+        // { id: 59, section: "C", name: "Safety Triangle", checked: false, defect: false },
+        // { id: 60, section: "C", name: "Organizer Booklet", checked: false, defect: false },
     ],
     D: [
         { id: 61, section: "D", name: "Side Panel Complete", checked: false, defect: false },
@@ -340,7 +345,7 @@ const initialChecklistBase = {
         { id: 93, section: "E", name: "Front Rr-Lh seats adjustment", checked: false, defect: false },
         { id: 94, section: "E", name: "Mid Lh Seat belt function", checked: false, defect: false },
         { id: 95, section: "E", name: "Mid Ctr Seat belt function", checked: false, defect: false },
-        { id: 96, section: "E", name: "Mid Lh Carpet Mat", checked: false, defect: false },
+        // { id: 96, section: "E", name: "Mid Lh Carpet Mat", checked: false, defect: false },
     ],
     F: [
         { id: 97, section: "F", name: "Fr Lh Door", checked: false, defect: false },
@@ -350,27 +355,25 @@ const initialChecklistBase = {
         { id: 101, section: "F", name: "B Pillar", checked: false, defect: false },
         { id: 102, section: "F", name: "Fr Lh Door Glasses appearance", checked: false, defect: false },
         { id: 103, section: "F", name: "Fr Lh Passenger Seat", checked: false, defect: false },
-        { id: 104, section: "F", name: "Fr Lh Carpet Mat", checked: false, defect: false },
+        // { id: 104, section: "F", name: "Fr Lh Carpet Mat", checked: false, defect: false },
         { id: 105, section: "F", name: "Fr Lh Power window switch operation", checked: false, defect: false },
         { id: 106, section: "F", name: "Passenger Sunvisor", checked: false, defect: false },
         { id: 107, section: "F", name: "Fr Lh Seat belt function", checked: false, defect: false },
         { id: 108, section: "F", name: "Fr Lh Air Conditioner / Vents / blower", checked: false, defect: false },
-        { id: 109, section: "F", name: "Child lock function", checked: false, defect: false },
+        // { id: 109, section: "F", name: "Child lock function", checked: false, defect: false },
     ],
     Overall: [
         { id: 110, section: "Overall", name: "Alarm System", checked: false, defect: false },
-        { id: 111, section: "Overall", name: "Remote / Keyless / Actuator function Fr/Rr", checked: false, defect: false }
+        { id: 111, section: "Overall", name: "Remote / Keyless / Actuator function Fr/Rr", checked: false, defect: false },
+        { id: 112, section: "Overall", name: "Loose Items", checked: false, defect: false }
     ]
 };
 
 export const ChecklistContext = createContext();
 
 export const ChecklistProvider = ({ children }) => {
-    // **NEW: Checklist stored by chassis number**
     const [checklists, setChecklists] = useState({});
-    const [currentChassis, setCurrentChassis] = useState(null);  // Track the current chassis number
-
-    // **NEW: Car Info State**
+    const [currentChassis, setCurrentChassis] = useState(null);
     const [carInfo, setCarInfo] = useState({
         model: '',
         variant: '',
@@ -378,126 +381,165 @@ export const ChecklistProvider = ({ children }) => {
         chassis_no: '',
         colour_code: '',
         entry_date: '',
-        startTime: null, // Add startTime
-        endTime: null, // Add endTime
+        startTime: null,
+        endTime: null,
     });
 
-    // **Helper to get the initial checklist based on variant**
+    const cloneData = (data) => JSON.parse(JSON.stringify(data));
+
     const getInitialChecklistForVariant = (variant) => {
-        if (variant === 'PLUS') return initialChecklistPlus;
-        return initialChecklistBase; // Default to BASE
+        if (variant === 'PLUS') return cloneData(initialChecklistPlus);
+        return cloneData(initialChecklistBase);
     };
     
-    const checklist = checklists[currentChassis] || getInitialChecklistForVariant(carInfo?.variant || 'BASE');
-
-    // **Effect to load the correct checklist based on chassis and variant**
     useEffect(() => {
         if (!currentChassis) return;
-
+        const activeVariant = carInfo.variant || 'BASE';
         setChecklists(prevChecklists => {
-            // If checklist already exists for the chassis, load it
-            if (prevChecklists[currentChassis]) {
-                //setChecklist(prevChecklists[currentChassis]);
-                return prevChecklists;
+            if (!prevChecklists[currentChassis]) {
+                return {
+                    ...prevChecklists,
+                    [currentChassis]: getInitialChecklistForVariant(activeVariant)
+                };
             }
-
-            // Get initial checklist based on the variant
-            const variant = carInfo.variant || 'BASE';
-            const initial = getInitialChecklistForVariant(variant);
-
-            //setChecklist(initial);
-            return {
-                ...prevChecklists,
-                [currentChassis]: initial
-            };
+            return prevChecklists;
         });
-    }, [currentChassis, carInfo.variant]); // Re-run effect when chassis or variant changes
+    }, [currentChassis]); // Removed carInfo.variant dependency to avoid re-init on variant change unless chassis also changes
 
-    // Toggle the checked status of an item
+    const checklist = currentChassis 
+        ? (checklists[currentChassis] || getInitialChecklistForVariant(carInfo.variant || 'BASE'))
+        : getInitialChecklistForVariant(carInfo.variant || 'BASE');
+
     const toggleCheck = (section, id) => {
-        if (!currentChassis) return; // Do nothing if no chassis is selected
-
-        setChecklists(prevChecklists => {
-            const prevChecklist = prevChecklists[currentChassis] || initialChecklistBase;
-            const updatedChecklist = {
-                ...prevChecklist,
-                [section]: prevChecklist[section].map(item =>
-                    item.id === id ? { ...item, checked: !item.checked, defect: false } : item
-                ),
-            };
-            return { ...prevChecklists, [currentChassis]: updatedChecklist };
+        if (!currentChassis) return;
+        setChecklists(prev => {
+            const checklistForCurrentChassis = prev[currentChassis] || getInitialChecklistForVariant(carInfo.variant || 'BASE');
+            const updatedSectionItems = (checklistForCurrentChassis[section] || []).map(item => {
+                if (item.id === id) {
+                    const isChecking = !item.checked;
+                    const updatedItem = { 
+                        ...item, 
+                        checked: isChecking, 
+                        defect: isChecking ? false : item.defect // Only reset defect if actively checking true
+                    };
+                    // If unchecking the battery item, also clear its measurementValue
+                    if (!isChecking && item.name === BATTERY_ITEM_NAME && section === BATTERY_ITEM_SECTION) {
+                       updatedItem.measurementValue = null; 
+                    }
+                    return updatedItem;
+                }
+                return item;
+            });
+            const updatedChecklistData = { ...checklistForCurrentChassis, [section]: updatedSectionItems };
+            return { ...prev, [currentChassis]: updatedChecklistData };
         });
     };
 
-    // NEW: Toggle All Items In Section
     const toggleCheckAll = (section, value) => {
         if (!currentChassis) return;
-      
-        setChecklists(prevChecklists => {
-          const prevChecklist = prevChecklists[currentChassis] || initialChecklist;
-          const updatedChecklist = {
-            ...prevChecklist,
-            [section]: prevChecklist[section].map(item => ({
+        setChecklists(prev => {
+            const checklistForCurrentChassis = prev[currentChassis] || getInitialChecklistForVariant(carInfo.variant || 'BASE');
+            const updatedSectionItems = (checklistForCurrentChassis[section] || []).map(item => ({
               ...item,
-              checked: value,  // true = check all, false = uncheck all
-              defect: false,   // clear defect if checked
-            })),
-          };
-          return { ...prevChecklists, [currentChassis]: updatedChecklist };
+              checked: value,
+              defect: value ? false : item.defect, // Only reset defect if checking all true
+              ...( !value && item.name === BATTERY_ITEM_NAME && section === BATTERY_ITEM_SECTION && { measurementValue: null } )
+            }));
+            const updatedChecklistData = { ...checklistForCurrentChassis, [section]: updatedSectionItems };
+            return { ...prev, [currentChassis]: updatedChecklistData };
         });
       };
       
-
-    // Toggle the defect status of an item
     const toggleDefect = (section, id) => {
-        if (!currentChassis) return; // Do nothing if no chassis is selected
-
-        setChecklists(prevChecklists => {
-            const prevChecklist = prevChecklists[currentChassis] || initialChecklistBase;
-            const updatedChecklist = {
-                ...prevChecklist,
-                [section]: prevChecklist[section].map(item =>
-                    item.id === id ? { ...item, defect: !item.defect, checked: false } : item
-                ),
-            };
-            return { ...prevChecklists, [currentChassis]: updatedChecklist };
+        if (!currentChassis) return;
+        setChecklists(prev => {
+            const checklistForCurrentChassis = prev[currentChassis] || getInitialChecklistForVariant(carInfo.variant || 'BASE');
+            const updatedSectionItems = (checklistForCurrentChassis[section] || []).map(item => {
+                if (item.id === id) {
+                    const isBecomingDefect = !item.defect;
+                    const updatedItem = { 
+                        ...item, 
+                        defect: isBecomingDefect, 
+                        checked: isBecomingDefect ? false : item.checked 
+                    };
+                    // If item becomes defect, and it's the battery item,
+                    // its measurementValue (if any) will now be captured in defectDetails.
+                    // The main item.measurementValue can be cleared or preserved based on desired logic.
+                    // For now, let's keep it as is, defectDetails will have the defect-specific value.
+                    // If you want to clear it from the item itself when it becomes a defect:
+                    // if (isBecomingDefect && item.name === BATTERY_ITEM_NAME && section === BATTERY_ITEM_SECTION) {
+                    //     updatedItem.measurementValue = null;
+                    // }
+                    return updatedItem;
+                }
+                return item;
+            });
+            const updatedChecklistData = { ...checklistForCurrentChassis, [section]: updatedSectionItems };
+            return { ...prev, [currentChassis]: updatedChecklistData };
         });
     };
 
-    // Update defect details for an item
-    const updateDefectDetails = (section, name, defectDetails) => {
-        if (!currentChassis) return; // Do nothing if no chassis is selected
-
-        setChecklists(prevChecklists => {
-            const prevChecklist = prevChecklists[currentChassis] || initialChecklistBase;
-
-            if (!prevChecklist || typeof prevChecklist !== "object") {
-                console.error("prevChecklist is not an object:", prevChecklist);
-                return prevChecklists;
+    const updateDefectDetails = (section, itemId, defectDetails) => {
+        if (!currentChassis) return;
+        setChecklists(prev => {
+            const checklistForCurrentChassis = prev[currentChassis] || getInitialChecklistForVariant(carInfo.variant || 'BASE');
+            if (!checklistForCurrentChassis || typeof checklistForCurrentChassis !== "object" || 
+                !checklistForCurrentChassis[section] || !Array.isArray(checklistForCurrentChassis[section])) {
+                console.error(`Error in updateDefectDetails: Invalid checklist structure for section ${section}, chassis ${currentChassis}`);
+                return prev;
             }
-            if (!prevChecklist[section]) {
-                console.error(`Section ${section} does not exist in checklist`);
-                return prevChecklists;
-            }
-
-            const updatedChecklist = {
-                ...prevChecklist,
-                [section]: prevChecklist[section].map((item) =>
-                    item.name === name ? { ...item, defectDetails } : item
-                ),
-            };
-            return { ...prevChecklists, [currentChassis]: updatedChecklist };
+            const updatedSectionItems = checklistForCurrentChassis[section].map((item) =>
+                item.id === itemId ? { ...item, defectDetails } : item
+            );
+            const updatedChecklistData = { ...checklistForCurrentChassis, [section]: updatedSectionItems };
+            return { ...prev, [currentChassis]: updatedChecklistData };
         });
     };
 
-    // **NEW: Function to set car info**
-    const updateCarInfo = (newCarInfo) => {
-        setCarInfo((prevCarInfo) => {
-            const updated = { ...prevCarInfo, ...newCarInfo };
-            if (newCarInfo.chassis_no) {
-                setCurrentChassis(newCarInfo.chassis_no); // Set the current chassis
-            }
-            return updated;
+    const updateCarInfo = (newCarInfoUpdate) => {
+        const oldChassis = carInfo.chassis_no;
+        const oldVariant = carInfo.variant;
+        const newFullCarInfo = { ...carInfo, ...newCarInfoUpdate };
+    
+        if (newFullCarInfo.chassis_no && newFullCarInfo.chassis_no !== oldChassis) {
+            setCurrentChassis(newFullCarInfo.chassis_no);
+        } else if (!newFullCarInfo.chassis_no && oldChassis) {
+            //setCurrentChassis(null); // Optional: handle clearing of chassis
+        }
+    
+        // If variant changes for the *current active chassis*, re-initialize its checklist
+        if (currentChassis && newFullCarInfo.variant && newFullCarInfo.variant !== oldVariant && newFullCarInfo.chassis_no === currentChassis) {
+            setChecklists(prevChecklists => ({
+                ...prevChecklists,
+                [currentChassis]: getInitialChecklistForVariant(newFullCarInfo.variant)
+            }));
+        }
+        setCarInfo(newFullCarInfo);
+    };
+
+    // valueInput for battery item should be a number (float) or null
+    const setItemValueAndCheck = (section, itemId, valueInput) => {
+        if (!currentChassis) return;
+        setChecklists(prev => {
+            const checklistForCurrentChassis = prev[currentChassis] || getInitialChecklistForVariant(carInfo.variant || 'BASE');
+            const updatedSectionItems = (checklistForCurrentChassis[section] || []).map(item => {
+                if (item.id === itemId) {
+                    const updatedItem = {
+                        ...item,
+                        checked: true, // Always check when a value is submitted
+                        defect: false, // Clear defect when a valid value is submitted
+                    };
+                    if (item.name === BATTERY_ITEM_NAME && section === BATTERY_ITEM_SECTION) {
+                        updatedItem.measurementValue = valueInput; // valueInput is number or null
+                    }
+                    // For other items, if they have specific value fields, handle them here
+                    // Example: updatedItem.someOtherValueField = valueInput;
+                    return updatedItem;
+                }
+                return item;
+            });
+            const updatedChecklistData = { ...checklistForCurrentChassis, [section]: updatedSectionItems };
+            return { ...prev, [currentChassis]: updatedChecklistData };
         });
     };
 
@@ -513,6 +555,7 @@ export const ChecklistProvider = ({ children }) => {
             updateCarInfo,
             currentChassis,
             setCurrentChassis,
+            setItemValueAndCheck,
           }}
         >
           {children}
