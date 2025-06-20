@@ -2,24 +2,19 @@
 import React, { useContext, useState, useEffect, useMemo } from 'react';
 import {
     View, Text, ScrollView, StyleSheet, TouchableOpacity,
-    ActivityIndicator, Platform, Alert // Removed SafeAreaView
+    ActivityIndicator, Platform, Alert 
 } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RectifyContext } from '../context/RectifyContext'; // Ensure path is correct
+import { RectifyContext } from '../context/RectifyContext';
 import { jwtDecode } from 'jwt-decode'; // Keep if used
-
-// --- Import ScreenWrapper ---
 import ScreenWrapper from '../styles/flowstudiosbg.js';
-
-// --- Import Common Styles & Constants ---
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles.js';
 
 const API_BASE_URL = 'http://pdi.flowstudios.com.my/api';
 const USERS_API_ENDPOINT = `${API_BASE_URL}/users`;
 const RECTIFY_API_ENDPOINT = `${API_BASE_URL}/jobcards/rectify`;
 
-// Helper function remains the same
 const sectionNumberToNameMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'Others', };
 const getSectionLetter = (sectionNumberInput) => {
     const sectionNumber = parseInt(sectionNumberInput, 10);
@@ -29,7 +24,6 @@ const getSectionLetter = (sectionNumberInput) => {
 };
 
 export default function RectifySummaryPage({ navigation }) {
-    // Context and State remain the same
     const { rectifyItems, carInfo, clearRectifyData } = useContext(RectifyContext);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [selectedSupervisor, setSelectedSupervisor] = useState(null);
@@ -39,7 +33,6 @@ export default function RectifySummaryPage({ navigation }) {
     const [validationError, setValidationError] = useState(null);
     const [submitError, setSubmitError] = useState(null);
 
-    // Fetch supervisors logic remains the same
     useEffect(() => {
         if (isSubmitting) { setValidationError(null); return; } let isMounted = true; setSupervisorFetchError(null);
         const fetchAndFilterSupervisors = async () => { if (isMounted) { setIsLoadingSupervisors(true); setSupervisors([]); setSupervisorFetchError(null); } else { return; } try { const token = await AsyncStorage.getItem('authToken'); if (!token) throw new Error("Token missing."); const response = await fetch(USERS_API_ENDPOINT, { method: 'GET', headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } }); const status = response.status; console.log(`[SupervisorFetch] Status: ${status}`); if (!response.ok) { const txt = await response.text(); console.error(`[SupervisorFetch] Error ${status}:`, txt); if (status === 403) throw new Error("Permission denied (403)."); throw new Error(`Fetch users failed (${status})`); } const data = await response.json(); if (!Array.isArray(data)) throw new Error("Invalid data format."); const filtered = data.filter(u => u?.type === 'Supervisor'); console.log(`[SupervisorFetch] Found ${filtered.length} supervisors.`); if (isMounted) { setSupervisors(filtered); setSupervisorFetchError(null); } } catch (error) { if (isMounted) { console.error("[SupervisorFetch] Error:", error); setSupervisorFetchError(error.message || 'Load failed.'); setSupervisors([]); } } finally { if (isMounted) { setIsLoadingSupervisors(false); console.log("[SupervisorFetch] Loading set false."); } } }; fetchAndFilterSupervisors();

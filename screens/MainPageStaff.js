@@ -1,29 +1,21 @@
 // screens/MainPageStaff.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'; // Removed SafeAreaView
-
-// --- Import ScreenWrapper ---
-// *** ADJUST PATH IF NEEDED ***
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import ScreenWrapper from '../styles/flowstudiosbg.js';
-
-// --- Import Common Styles & Constants ---
-// *** ADJUST PATH IF NEEDED ***
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
 
-// Define specific sizes for this page's buttons (can be same as Supervisor or different)
-const LARGE_BUTTON_FONT_SIZE = 30; // Keep original large size
-const LARGE_BUTTON_V_PADDING = 40; // Keep original large padding
-const LARGE_BUTTON_MARGIN = 60;    // Keep original large margin
+const LARGE_BUTTON_FONT_SIZE = 30;
+const LARGE_BUTTON_V_PADDING = 40;
+const LARGE_BUTTON_MARGIN = 60;
 
 export default function MainPageStaff({ navigation, onLogout }) {
   return (
-    // Use ScreenWrapper, show Header and Footer by default
     <ScreenWrapper
       showHeader={true}
       showFooter={true}
-      contentStyle={localStyles.content} // Apply local centering/width style
-      enableKeyboardAvoidingView={false} // No inputs
-      enableScrollView={false} // Content fits screen
+      contentStyle={localStyles.content}
+      enableKeyboardAvoidingView={false}
+      enableScrollView={false}
     >
       {/* Buttons are children of ScreenWrapper */}
 
@@ -41,7 +33,7 @@ export default function MainPageStaff({ navigation, onLogout }) {
 
       {/* Logout Button */}
       <TouchableOpacity
-        style={[localStyles.menuButton, localStyles.logoutButton]} // Combine base + logout specific style
+        style={[localStyles.menuButton, localStyles.logoutButton]} 
         onPress={onLogout}
       >
         {/* Use specific text style for logout for potential color override */}
@@ -52,38 +44,34 @@ export default function MainPageStaff({ navigation, onLogout }) {
   );
 }
 
-// --- Local Styles ---
-// Styles specific to this Staff Menu page
+
 const localStyles = StyleSheet.create({
-    content: { // Passed to ScreenWrapper's contentStyle
-        flex: 1, // Fill space between Header/Footer
-        justifyContent: 'center', // Center buttons vertically
-        alignItems: 'center', // Center buttons horizontally within the 50% width
-        width: '50%', // Keep the 50% width column effect
-        alignSelf: 'center', // Center the 50% column itself
+    content: {
+        flex: 1,
+        justifyContent: 'center', 
+        alignItems: 'center',
+        width: '50%',
+        alignSelf: 'center',
     },
     menuButton: {
-        backgroundColor: COLORS.primaryLight, // Use theme color
-        paddingVertical: LARGE_BUTTON_V_PADDING, // Use defined large padding
-        marginBottom: LARGE_BUTTON_MARGIN, // Use defined large margin
-        alignItems: 'center', // Center text inside button
-        alignSelf: 'stretch', // Make button stretch to container width (50% of screen)
-        borderRadius: 5, // Keep original radius
+        backgroundColor: COLORS.primaryLight,
+        paddingVertical: LARGE_BUTTON_V_PADDING,
+        marginBottom: LARGE_BUTTON_MARGIN,
+        alignItems: 'center',
+        alignSelf: 'stretch',
+        borderRadius: 5,
     },
     menuButtonText: {
-        fontSize: LARGE_BUTTON_FONT_SIZE, // Use defined large font size
+        fontSize: LARGE_BUTTON_FONT_SIZE,
         fontWeight: 'bold',
-        color: COLORS.secondary, // Use theme text color
+        color: COLORS.secondary,
     },
     logoutButton: {
-        // Override background for logout button
-        backgroundColor: COLORS.danger, // Use theme danger color
+        backgroundColor: COLORS.danger,
     },
     logoutButtonText: {
-        // Define specific text style for logout button
-        fontSize: LARGE_BUTTON_FONT_SIZE, // Match other buttons
+        fontSize: LARGE_BUTTON_FONT_SIZE,
         fontWeight: 'bold',
-        color: COLORS.white, // Ensure white text on red background
+        color: COLORS.white,
     },
-    // Removed original container, appBar, appBarTitle, button, buttonText styles
 });

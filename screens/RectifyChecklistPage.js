@@ -4,33 +4,29 @@ import {
     View, Text, ScrollView, StyleSheet, TouchableOpacity,
     Alert, Modal, Image, ActivityIndicator, Platform
 } from 'react-native';
-import CheckBox from 'react-native-checkbox'; // Adjust if using a different library
-import { RectifyContext } from '../context/RectifyContext'; // Adjust path
-import RectifyInfoModal from './RectifyInfoModal'; // Adjust path
-import ScreenWrapper from '../styles/flowstudiosbg.js'; // Adjust path
-import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles'; // Adjust path
+import CheckBox from 'react-native-checkbox';
+import { RectifyContext } from '../context/RectifyContext';
+import RectifyInfoModal from './RectifyInfoModal';
+import ScreenWrapper from '../styles/flowstudiosbg.js';
+import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
 
-// --- Constants ---
 const MARKER_SIZE = 24;
 const SUMMARY_PAGE_IMAGE_WIDTH = 500;
 const SUMMARY_PAGE_IMAGE_HEIGHT = 600;
 
-// --- Helper Functions (Original) ---
 const sectionNumberToNameMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'Others', };
 const getSectionLetter = (sectionNumberInput) => {
     const sectionNumber = parseInt(sectionNumberInput, 10);
     if (!isNaN(sectionNumber) && sectionNumberToNameMap.hasOwnProperty(sectionNumber)) {
         return sectionNumberToNameMap[sectionNumber];
     }
-    // Updated warning and consistent return
     console.warn(`[getSectionLetter] Invalid or unmapped section number: "${sectionNumberInput}". Mapping to 'Others'.`);
     const othersKey = Object.keys(sectionNumberToNameMap).find(key => sectionNumberToNameMap[key] === 'Others');
-    return othersKey ? sectionNumberToNameMap[othersKey] : 'Others'; // Return 'Others' explicitly
+    return othersKey ? sectionNumberToNameMap[othersKey] : 'Others';
 };
 const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     try {
-        // Format as DD/MM/YYYY
         return new Date(dateString).toLocaleDateString('en-GB');
     }
     catch (e) {
@@ -38,30 +34,23 @@ const formatDate = (dateString) => {
         return 'Invalid Date';
     }
 };
-// --- End Helper Functions ---
 
 
-// --- Component ---
 export default function RectifyChecklistPage({ navigation, route }) {
     console.log("\n--- RectifyChecklistPage Render START ---");
 
-    // --- Context ---
     const contextData = useContext(RectifyContext);
     const {
         rectifyItems: allItemsFromContext, carInfo, images, loading, error, rectifyItemWithDetails, unrectifyItem, fetchDataForRectification,
     } = contextData || {};
 
-    // --- State (Original) ---
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [imageLoading, setImageLoading] = useState(false);
     const [rectifyInfoModalVisible, setRectifyInfoModalVisible] = useState(false);
     const [selectedItemForRectify, setSelectedItemForRectify] = useState(null);
     const [modalImageLayout, setModalImageLayout] = useState(null);
-    // --- End State ---
-
-
-    // --- Memos (Original) ---
+  
     const defectItems = useMemo(() => {
         console.log("[Memo] Calculating defectItems...");
         if (!Array.isArray(allItemsFromContext)) {
@@ -90,7 +79,6 @@ export default function RectifyChecklistPage({ navigation, route }) {
                 const sectionValue = item.section;
                 let mappedSectionKey = null;
 
-                // Logic to map section value (number or string) to section key ('A', 'B', etc.)
                 if (typeof sectionValue === 'number') {
                     const sectionNumber = sectionValue;
                     if (!isNaN(sectionNumber)) {
@@ -116,7 +104,6 @@ export default function RectifyChecklistPage({ navigation, route }) {
                     if (!groups[mappedSectionKey]) { groups[mappedSectionKey] = []; }
                     groups[mappedSectionKey].push(item);
                 } else {
-                    // Fallback to 'Others' if mapping fails
                     const othersKey = 'Others';
                     console.warn(`[Grouping Debug] -> Item ID ${item.id} could not be mapped ('${mappedSectionKey}'). Falling back to '${othersKey}'.`);
                     if (!groups[othersKey]) { groups[othersKey] = []; }
@@ -124,21 +111,19 @@ export default function RectifyChecklistPage({ navigation, route }) {
                 }
             });
 
-            // Sort items within each group by ID
             for (const key in groups) {
                 groups[key].sort((a, b) => (a.id || 0) - (b.id || 0));
             }
 
-            // Sort the section keys ('A', 'B', ..., 'Others')
             const sortedKeys = Object.keys(groups).sort((a, b) => {
-                if (a === 'Others') return 1; // 'Others' always last
+                if (a === 'Others') return 1;
                 if (b === 'Others') return -1;
                 const numA = Object.keys(sectionNumberToNameMap).find(key => sectionNumberToNameMap[key] === a);
                 const numB = Object.keys(sectionNumberToNameMap).find(key => sectionNumberToNameMap[key] === b);
                 if (numA && numB) {
                     return parseInt(numA, 10) - parseInt(numB, 10);
                 }
-                return a.localeCompare(b); // Fallback sort
+                return a.localeCompare(b);
             });
 
             console.log(`[Memo] Grouped items into sections: ${sortedKeys.join(', ')}`);
@@ -150,16 +135,12 @@ export default function RectifyChecklistPage({ navigation, route }) {
     }, [defectItems]);
 
     const allDefectsRectified = useMemo(() => {
-        // Original calculation remains unchanged
         if (!Array.isArray(defectItems) || defectItems.length === 0) return true;
         const result = defectItems.every(item => item && item.rectified === true);
         console.log(`[Memo] All defects rectified: ${result}`);
         return result;
     }, [defectItems]);
-    // --- End Memos ---
 
-
-    // --- Handlers (Original) ---
     const handleNextImage = () => {
         if (!images || images.length === 0) return;
         setImageLoading(true);
@@ -216,13 +197,9 @@ export default function RectifyChecklistPage({ navigation, route }) {
         setRectifyInfoModalVisible(false);
         setSelectedItemForRectify(null);
     };
-    // --- End Handlers ---
 
-
-    // --- Layout Callback for Image Modal (Original) ---
     const onModalImageLayout = useCallback((event) => {
         const { width, height } = event.nativeEvent.layout;
-        // console.log(`[Layout Callback] Modal image layout measured: ${width}x${height}`); // Reduce logging
         if (width > 0 && height > 0) {
             if (!modalImageLayout || modalImageLayout.width !== width || modalImageLayout.height !== height) {
                 console.log("[Layout Callback] Setting modal image layout state.");
@@ -232,24 +209,18 @@ export default function RectifyChecklistPage({ navigation, route }) {
             console.warn("[Layout Callback] Invalid dimensions measured:", width, height);
         }
     }, [modalImageLayout]);
-    // --- End Layout Callback ---
 
-
-    // --- Mark Filtering Calculation for Image Modal (Original) ---
     const marksForCurrentImage = useMemo(() => {
-        // Original calculation remains unchanged
-        // console.log("[Memo] Calculating marksForCurrentImage..."); // Reduce logging
         if (!modalImageLayout) return [];
         if (!images || images.length <= currentImageIndex) return [];
         if (!Array.isArray(defectItems)) return [];
 
         const currentImageId = images[currentImageIndex].id;
-        // console.log(`[Memo] Current image ID: ${currentImageId}`); // Reduce logging
         const filteredMarks = [];
 
         defectItems.forEach((item) => {
             if (!item) return;
-            const defectsArray = item?.allDefects; // Assuming structure from context
+            const defectsArray = item?.allDefects;
             if (!Array.isArray(defectsArray) || defectsArray.length === 0) return;
 
             defectsArray.forEach((defectInfo, defectIndex) => {
@@ -280,7 +251,6 @@ export default function RectifyChecklistPage({ navigation, route }) {
                     }
                     const pixelX = xCoord * modalImageLayout.width;
                     const pixelY = yCoord * modalImageLayout.height;
-                    // console.log(`[Memo Marks] Adding mark for Item ID ${item.id}`); // Reduce logging
                     filteredMarks.push({
                         id: `${item.id}-defect-${defectIndex}-mark-${markIndex}`,
                         pixelX: pixelX - MARKER_SIZE / 2,
@@ -290,15 +260,9 @@ export default function RectifyChecklistPage({ navigation, route }) {
                 });
             });
         });
-        // console.log(`[Memo] Found ${filteredMarks.length} marks for image ID ${currentImageId}.`); // Reduce logging
         return filteredMarks;
     }, [defectItems, images, currentImageIndex, modalImageLayout]);
-    // --- End Mark Calculation ---
 
-
-    // --- RENDER LOGIC ---
-
-    // Loading/Error States (Original)
     if (loading) {
         return (
             <ScreenWrapper showHeader={true} showFooter={false}>
@@ -341,12 +305,8 @@ export default function RectifyChecklistPage({ navigation, route }) {
             </ScreenWrapper>
         )
     }
-    // --- End Loading/Error States ---
-
-    // Create a shallow copy using spread syntax [...] before sorting
     const sortedImages = images ? [...images].sort((a, b) => a.id - b.id) : [];
 
-    // --- Main Content Render ---
     const currentImageData =
         sortedImages.length > currentImageIndex
             ? sortedImages[currentImageIndex]
@@ -357,11 +317,9 @@ export default function RectifyChecklistPage({ navigation, route }) {
             : `http://${String(currentImageData.file_path).trim()}`
         : null;
 
-    // console.log(`Rendering main content. All rectified: ${allDefectsRectified}.`); // Reduce logging
 
     return (
         <ScreenWrapper showHeader={true} showFooter={true} enableScrollView={false} enableKeyboardAvoidingView={Platform.OS === 'ios'} >
-            {/* Scrollable Content */}
             <ScrollView
                 style={localStyles.scrollView}
                 contentContainerStyle={localStyles.scrollContentContainer}
@@ -371,7 +329,6 @@ export default function RectifyChecklistPage({ navigation, route }) {
                 <Text style={localStyles.subHeader}>Chassis: {carInfo?.chassis_no || 'N/A'}</Text>
                 <Text style={localStyles.carInfo}>Model: {carInfo?.model || 'N/A'}</Text>
 
-                {/* View Defect Locations Button (Original) */}
                 <View style={localStyles.viewImageButtonContainer}>
                     <TouchableOpacity
                         style={[
@@ -397,25 +354,20 @@ export default function RectifyChecklistPage({ navigation, route }) {
                     </TouchableOpacity>
                 </View>
 
-                {/* Defect List - Grouped by Section */}
                 {sortedSectionKeys && sortedSectionKeys.length > 0
                     ? sortedSectionKeys.map((sectionKey) => (
                         <View key={sectionKey} style={localStyles.sectionContainer}>
                             <Text style={localStyles.sectionHeader}>Section {sectionKey}</Text>
-                            {/* Items within the section */}
                             {Array.isArray(groupedItems[sectionKey]) ? groupedItems[sectionKey].map((item, index) => {
                                 if (!item || item.id === undefined) {
                                     console.warn(`Skipping rendering of invalid item in section ${sectionKey}.`);
                                     return null;
                                 }
 
-                                // Extract defect details (assuming first defect is primary from allDefects)
-                                // This is where severity is expected from the server
                                 const defectInfo = item.allDefects?.[0];
 
                                 return (
                                     <View key={item.id} style={localStyles.item}>
-                                        {/* Left side: Item details */}
                                         <View style={localStyles.itemDetails}>
                                             {/* Item Name */}
                                             <Text style={localStyles.itemName}>
@@ -441,22 +393,13 @@ export default function RectifyChecklistPage({ navigation, route }) {
                                                             {defectInfo.type || 'N/A'}
                                                         </Text>
                                                     </View>
-                                                    {/* --- MODIFIED: Added Severity Row --- */}
                                                     <View style={localStyles.detailRow}>
                                                         <Text style={localStyles.detailLabel}>Severity</Text>
                                                         <Text style={localStyles.detailSeparator}>:</Text>
                                                         <Text style={localStyles.detailValue}>
-                                                            {/* Display Severity fetched from server */}
                                                             {defectInfo.severity || 'N/A'}
                                                         </Text>
                                                     </View>
-                                                    {/* --- END MODIFICATION --- */}
-                                                    {/* Location Row (Optional) */}
-                                                    {/* <View style={localStyles.detailRow}>
-                                                        <Text style={localStyles.detailLabel}>Location</Text>
-                                                        <Text style={localStyles.detailSeparator}>:</Text>
-                                                        <Text style={localStyles.detailValue}>{defectInfo.location || 'N/A'}</Text>
-                                                    </View> */}
                                                 </View>
                                             )}
 

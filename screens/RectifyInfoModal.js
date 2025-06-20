@@ -9,7 +9,6 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 import { Picker } from '@react-native-picker/picker';
 import { Checkbox } from 'react-native-paper';
 
-// Import theme constants and common styles
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles';
 
 const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
@@ -17,7 +16,7 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
     const [staffNo, setStaffNo] = useState('');
     const [date, setDate] = useState(new Date());
     const [showPicker, setShowPicker] = useState(false);
-    const [remark, setRemark] = useState(''); // Remark state
+    const [remark, setRemark] = useState('');
     const [tempOrganization, setTempOrganization] = useState('');
     const [otherOrganization, setOtherOrganization] = useState('');
 
@@ -25,8 +24,7 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
 
     useEffect(() => {
         if (tempOrganization === 'Others') {
-            // Don't immediately set organization, just trigger other input
-            setOtherOrganization(''); // Optional: reset previous
+            setOtherOrganization(''); 
         }
     }, [tempOrganization]);
 
@@ -35,22 +33,16 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
             setStaffName('');
             setStaffNo('');
             setDate(new Date());
-            setRemark(''); // Reset remark as well
+            setRemark('');
             setShowPicker(false);
         }
     }, [visible]);
 
-    // --- MODIFICATION START ---
-    // Determine if the form is valid for confirmation (include remark)
     const isFormValid = staffName.trim() && staffNo.trim() && remark.trim();
-    // --- MODIFICATION END ---
 
     const handleConfirmPress = () => {
         if (!isFormValid) {
-            // --- MODIFICATION START ---
-            // Update alert message to include remark
             Alert.alert("Missing Information", "Please enter Staff Name, Staff No, and Remark.");
-            // --- MODIFICATION END ---
             return;
         }
         console.log(`Closed in handleConfirmPress: ${closed}`);
@@ -222,16 +214,14 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
                         {/* --- MODIFICATION START --- */}
                         <TouchableOpacity
                             style={[
-                                styles.modalButtonBase, // Base styles (padding, radius etc.)
-                                // Apply background color conditionally
+                                styles.modalButtonBase,
                                 { backgroundColor: isFormValid ? COLORS.primary : COLORS.disabled }
                             ]}
                             onPress={handleConfirmPress}
-                            disabled={!isFormValid} // Functional disable toggle
+                            disabled={!isFormValid}
                         >
                             <Text style={[
-                                styles.modalButtonTextBase, // Base text styles (font, weight etc.)
-                                // Apply text color conditionally
+                                styles.modalButtonTextBase,
                                 { color: isFormValid ? COLORS.white : COLORS.grey }
                             ]}>
                                 Confirm
@@ -245,7 +235,6 @@ const RectifyInfoModal = ({ visible, item, onClose, onConfirm }) => {
     );
 };
 
-// --- Styles (Keep As Is - definitions for confirmButton/confirmButtonText are now unused but harmless) ---
 const styles = StyleSheet.create({
     rectifyModalOverlay: {
         flex: 1,
@@ -343,9 +332,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: COLORS.border,
     },
-    // confirmButton style object is no longer explicitly used here, color is set inline
-    // confirmButton: { backgroundColor: COLORS.primary },
-    modalButtonTextBase: { // Base styles - applied always
+    modalButtonTextBase: { 
         fontSize: FONT_SIZES.medium,
         fontWeight: 'bold',
         textAlign: 'center',
@@ -353,11 +340,8 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         color: COLORS.grey,
     },
-    // confirmButtonText style object is no longer explicitly used here, color is set inline
-    // confirmButtonText: { color: COLORS.white },
 });
 
-// Helper function (Keep as is)
 const getSectionLetter = (sectionNumberInput) => {
     const sectionNumber = parseInt(sectionNumberInput, 10);
     const map = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'Others', };

@@ -6,20 +6,11 @@ import {
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// --- Import ScreenWrapper ---
-// *** ADJUST PATH IF NEEDED ***
 import ScreenWrapper from '../styles/flowstudiosbg.js';
-
-// --- Import Common Styles & Constants ---
-// *** ADJUST PATH IF NEEDED ***
 import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles.js';
 
-// --- Import Custom Components ---
-// *** ADJUST PATH IF NEEDED ***
 import InspectionConfirm from '../screens/InspectionConfirm';
 
-// --- API Endpoints / Constants / Helpers ---
 const API_BASE_URL = 'http://pdi.flowstudios.com.my/api';
 const JOB_CARD_DETAIL_ENDPOINT = `${API_BASE_URL}/jobcards`;
 const PDI_APPROVAL_BASE_ENDPOINT = `${API_BASE_URL}/approvals`;
@@ -27,16 +18,12 @@ const PDI_APPROVAL_BASE_ENDPOINT = `${API_BASE_URL}/approvals`;
 const MODAL_IMAGE_WIDTH = 500;
 const MODAL_IMAGE_HEIGHT = 600;
 
-// Helper functions (Unchanged)
 const sectionNumberToNameMap = { 1: 'A', 2: 'B', 3: 'C', 4: 'D', 5: 'E', 6: 'F', 7: 'Others' };
 const getSectionNameFromNumber = (number) => number === null || number === undefined ? 'Uncategorized' : sectionNumberToNameMap[number] || `Unknown Section (${number})`;
-// isItemRectified checks item.defect, which exists in items from data.sections
 const isItemRectified = (item) => item && Array.isArray(item.defect) && item.defect.length > 0 && item.defect.some(d => d && d.rectify && typeof d.rectify === 'object');
 const formatDate = (date) => { if (!date) return 'N/A'; try { const dateObj = new Date(date); return isNaN(dateObj.getTime()) ? 'Invalid Date' : dateObj.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (error) { console.error("Error formatting date:", date, error); return 'Error Date'; } };
 
-// --- Component Definition ---
 export default function InspectionInfo({ navigation }) {
-    // --- State & Route --- (Unchanged)
     const route = useRoute();
     const { chassisNo } = route.params || {};
     const [detailedVehicleData, setDetailedVehicleData] = useState(null);
@@ -48,14 +35,9 @@ export default function InspectionInfo({ navigation }) {
     const [showPdiConfirmModal, setShowPdiConfirmModal] = useState(false);
     const [pdiDecisionToConfirm, setPdiDecisionToConfirm] = useState(null);
     const [isConfirmingPdi, setIsConfirmingPdi] = useState(false);
-    const [supervisorName, setSupervisorName] = useState('N/A'); // User viewing the screen
+    const [supervisorName, setSupervisorName] = useState('N/A');
 
-    // --- useEffects ---
-
-    // Fetch user name (Unchanged)
     useEffect(() => { const fetchUserName = async () => { try { const name = await AsyncStorage.getItem('userFullName'); if (name) { setSupervisorName(name); } else { console.warn("'userFullName' not found in AsyncStorage."); } } catch (e) { console.error("Failed to fetch supervisor name:", e); } }; fetchUserName(); }, []);
-
-    // Fetch Job Card Details (Fetch logic unchanged, validation slightly adapted)
     useEffect(() => {
         const fetchJobCardDetails = async () => {
             if (!chassisNo) { setFetchError("No chassis number provided."); setIsLoadingDetails(false); return; }
@@ -73,7 +55,6 @@ export default function InspectionInfo({ navigation }) {
                 }
                 const data = await response.json();
                 console.log(`[InspectionInfo] Fetch Success.`);
-                // Basic data validation - check for chassis_no and the sections array specifically
                 if (!data || typeof data !== 'object' || !data.chassis_no || !Array.isArray(data.sections)) { // Check for data.sections array
                     console.error("[InspectionInfo] Invalid data format received (missing chassis_no or sections array):", JSON.stringify(data).substring(0, 500));
                     throw new Error("Invalid data format received from server.");
@@ -86,50 +67,37 @@ export default function InspectionInfo({ navigation }) {
     }, [chassisNo]);
 
 
-    // --- *** MODIFIED useMemo hook to process data.sections *** ---
     const allItems = useMemo(() => {
         console.log("[InspectionInfo useMemo - allItems] Calculating all items from data.sections...");
-        // Source items from detailedVehicleData.sections
         if (!detailedVehicleData?.sections) {
             console.log("[InspectionInfo useMemo - allItems] detailedVehicleData.sections is missing or null.");
-            return []; // Return empty array if sections data is not available
+            return [];
         }
         let collectedItems = [];
         try {
-            // Iterate through each section object provided in the .sections array
             detailedVehicleData.sections.forEach((sectionObj, sectionIndex) => {
-                // Check if the section object and its 'items' array are valid
                 if (sectionObj && Array.isArray(sectionObj.items)) {
-                    // Filter out any potential null/undefined items within the section's items array before concatenating
                     const validItemsInSection = sectionObj.items.filter(item => item != null);
                     collectedItems = collectedItems.concat(validItemsInSection);
                 } else {
-                    // Log a warning if a section object is invalid or missing its items array
                     console.warn(`[InspectionInfo useMemo - allItems] Skipping invalid section object or missing items array at index ${sectionIndex}:`, sectionObj);
                 }
             });
             console.log(`[InspectionInfo useMemo - allItems] Collected ${collectedItems.length} items from sections.`);
-            return collectedItems; // Return the flat list of all valid items from all sections
+            return collectedItems;
         } catch (error) {
-            // Log error if processing fails
             console.error("[InspectionInfo useMemo - allItems] Error processing sections:", error);
-            return []; // Return empty array on error
+            return [];
         }
-    }, [detailedVehicleData]); // Dependency: Re-calculate when detailedVehicleData changes
-    // --- *** END OF MODIFICATION *** ---
+    }, [detailedVehicleData]);
 
-
-    // --- Subsequent useMemo hooks (depend on `allItems`, logic unchanged) ---
-
-    // Filters for items that have been rectified
     const rectifiedItemsOnly = useMemo(() => {
         console.log("[InspectionInfo useMemo - rectifiedItemsOnly] Filtering rectified items from allItems...");
-        const filtered = allItems.filter(isItemRectified); // Uses the `allItems` derived from sections
+        const filtered = allItems.filter(isItemRectified);
         console.log(`[InspectionInfo useMemo - rectifiedItemsOnly] Found ${filtered.length} rectified items.`);
         return filtered;
-    }, [allItems]); // Depends on the modified allItems
+    }, [allItems]);
 
-    // Groups the rectified items by section name for display
     const { groupedItemsForDisplay, sortedSectionsForDisplay, groupingError } = useMemo(() => {
         console.log("[InspectionInfo useMemo - groupedItems] Grouping rectified items...");
         if (!rectifiedItemsOnly) return { groupedItemsForDisplay: {}, sortedSectionsForDisplay: [], groupingError: "Rectified items data unavailable." };
@@ -137,15 +105,14 @@ export default function InspectionInfo({ navigation }) {
         try {
             rectifiedItemsOnly.forEach(item => {
                 if (!item?.id) return;
-                const sectionName = getSectionNameFromNumber(item.section); // Uses helper function converts number to letter/name
+                const sectionName = getSectionNameFromNumber(item.section); 
                 if (!grouped[sectionName]) grouped[sectionName] = [];
                 grouped[sectionName].push(item);
             });
-            // Sorting logic (A, B, C..., Others, Uncategorized) - Unchanged
             const order = ['A', 'B', 'C', 'D', 'E', 'F', 'Others'];
             const sortedKeys = Object.keys(grouped).sort((a, b) => {
                 const iA = order.indexOf(a), iB = order.indexOf(b);
-                if (iA !== -1 && iB !== -1) return iA - iB; // Sort A-F correctly
+                if (iA !== -1 && iB !== -1) return iA - iB;
                 if (iA !== -1) return -1; // A-F comes before others
                 if (iB !== -1) return 1;  // Others comes after A-F
                 if (a === 'Uncategorized') return 1; // Uncategorized last

@@ -1,22 +1,20 @@
-// screens/MarkModal.js (Reverted image size and marker positioning to original, with prop fix)
+// screens/MarkModal.js 
 import React, { useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Modal, ActivityIndicator } from 'react-native';
-import { ChecklistContext } from '../context/ChecklistContext'; // Adjust path as needed
+import { ChecklistContext } from '../context/ChecklistContext';
 
-// --- Constants ---
 const imageKeys = ['vehicle1', 'vehicle2', 'vehicle3'];
 const baseImages = {
-    'vehicle1': require('../assets/vehicle.png'),    // Adjust path as needed
-    'vehicle2': require('../assets/vehicle2.png'),    // Adjust path as needed
-    'vehicle3': require('../assets/vehicle3.png')     // Adjust path as needed
+    'vehicle1': require('../assets/vehicle.png'),
+    'vehicle2': require('../assets/vehicle2.png'),
+    'vehicle3': require('../assets/vehicle3.png')
 };
-const MARKER_SIZE = 24; // As per your original styles
+const MARKER_SIZE = 24;
 
 export default function MarkModal({
     visible,
     onClose,
-    selectedItem,         // Prop received from DefectInfoModal
-    closeDefectModal
+    selectedItem,
 }) {
     const { updateDefectDetails } = useContext(ChecklistContext);
 
@@ -25,7 +23,6 @@ export default function MarkModal({
     const [imageLayout, setImageLayout] = useState(null);
     const isInitialSetupDone = useRef(false);
 
-    // Derived itemInfo and initialDefectDetails from selectedItem
     const itemInfo = selectedItem ? {
                                         id: selectedItem.id,
                                         section: selectedItem.section,
@@ -54,7 +51,7 @@ export default function MarkModal({
         } else {
             isInitialSetupDone.current = false;
         }
-    }, [visible, selectedItem]); // Using selectedItem directly as a dependency
+    }, [visible, selectedItem]);
 
     const handleImageTap = (event) => {
         if (!itemInfo || !itemInfo.id || !itemInfo.section) {
@@ -165,17 +162,16 @@ export default function MarkModal({
                         <Image
                             key={currentSelectedImageKey}
                             source={getImageSource()}
-                            style={styles.image} // Reverted to use your styles.image
+                            style={styles.image}
                             onLayout={onImageLayout}
                             onError={(e) => console.error("Image Load Error for key " + currentSelectedImageKey + ":", e.nativeEvent.error)}
                         />
                         {imageLayout && currentMarks.map((mark, index) => {
                             const pixelX = mark.nx * imageLayout.width;
                             const pixelY = mark.ny * imageLayout.height;
-                            // REVERTED markerStyle to your original logic for positioning
                             const markerStyle = {
-                                left: pixelX - MARKER_SIZE / 2, // Your original calculation
-                                top: pixelY - MARKER_SIZE / 2,  // Your original calculation
+                                left: pixelX - MARKER_SIZE / 2,
+                                top: pixelY - MARKER_SIZE / 2,
                              };
                             return (
                                 <View key={index} style={[styles.markerContainer, markerStyle]}>
@@ -200,19 +196,18 @@ export default function MarkModal({
     );
 }
 
-// --- Styles (Using the styles you provided in the prompt where you shared this MarkModal code) ---
 const styles = StyleSheet.create({
-    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }, // Original BG
+    modalContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' },
     header: { fontSize: 20, fontWeight: 'bold', color: 'white', marginBottom: 10 },
     imageSelector: { flexDirection: 'row', justifyContent: 'space-around', width: '90%', marginBottom: 10, alignItems: 'center' },
-    imageButton: { backgroundColor: '#ffe6cc', padding: 15, paddingHorizontal: 40, borderRadius: 5 }, // Original padding
+    imageButton: { backgroundColor: '#ffe6cc', padding: 15, paddingHorizontal: 40, borderRadius: 5 },
     imageButtonText: { fontWeight: 'bold', color: 'black' },
-    imageKeyText: {color:'white', marginHorizontal: 10, fontSize: 16, fontWeight: 'bold', textAlign: 'center', flexShrink: 1}, // Copied from my prev suggestion as it was good
-    image: { width: 500, height: 600, resizeMode: 'contain', backgroundColor: 'white' }, // *** REVERTED TO YOUR ORIGINAL SIZE ***
+    imageKeyText: {color:'white', marginHorizontal: 10, fontSize: 16, fontWeight: 'bold', textAlign: 'center', flexShrink: 1},
+    image: { width: 500, height: 600, resizeMode: 'contain', backgroundColor: 'white' },
     markerContainer: { position: 'absolute', alignItems: 'center', justifyContent: 'center', width: MARKER_SIZE, height: MARKER_SIZE },
-    xMark: { fontSize: 16, fontWeight: 'bold', color: 'red' }, // Original font size
+    xMark: { fontSize: 16, fontWeight: 'bold', color: 'red' },
     circle: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: 'black', position: 'absolute' },
-    closeButton: { marginTop: 20, backgroundColor: 'maroon', padding: 15, paddingHorizontal: 40, borderRadius: 5 }, // Original padding
+    closeButton: { marginTop: 20, backgroundColor: 'maroon', padding: 15, paddingHorizontal: 40, borderRadius: 5 },
     closeText: { fontWeight: 'bold', color: 'white' },
     loadingOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)', justifyContent: 'center', alignItems: 'center' },
     loadingText: { color: 'white', marginTop: 10, fontSize: 12 }

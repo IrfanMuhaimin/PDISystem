@@ -4,20 +4,17 @@ import {
     View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform,
     Alert,
     ActivityIndicator
-    // Import Clipboard if you want the copy-to-clipboard fallback
-    // import { Clipboard } from 'react-native';
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing'; // Import Sharing
+import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import ScreenWrapper from '../styles/flowstudiosbg.js'; // Ensure path is correct
-import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles.js'; // Ensure path is correct
+import ScreenWrapper from '../styles/flowstudiosbg.js';
+import commonStyles, { COLORS, FONT_SIZES, PADDING, MARGIN } from '../styles/commonStyles.js';
 
-// --- Token retrieval logic ---
 const getAuthToken = async () => {
     try {
-        const token = await AsyncStorage.getItem('authToken'); // Use the key from your login logic
+        const token = await AsyncStorage.getItem('authToken');
         if (token !== null) {
             return token;
         } else {
@@ -29,9 +26,8 @@ const getAuthToken = async () => {
         return null;
     }
 };
-// --- End token retrieval logic ---
 
-export default function SOP({ navigation }) { // Keep navigation prop for Back button etc.
+export default function SOP({ navigation }) { 
 
     const [selectedModel, setSelectedModel] = useState(null);
     const [selectedVariant, setSelectedVariant] = useState(null);
@@ -39,11 +35,9 @@ export default function SOP({ navigation }) { // Keep navigation prop for Back b
     const [showVariantDropdown, setShowVariantDropdown] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
 
-    // Data (can be fetched dynamically later if needed)
     const models = ['Xpander'];
     const variants = ['BASE', 'PLUS'];
 
-    // --- PDF Handler (Download and Share) ---
     const handleViewPDF = async () => {
         if (!selectedModel || !selectedVariant) {
             Alert.alert('Selection Required', 'Please select both model and variant.');
@@ -63,7 +57,6 @@ export default function SOP({ navigation }) { // Keep navigation prop for Back b
                 return;
             }
 
-            // !! WARNING: Using HTTP is insecure !! Consider HTTPS if possible !!
             const apiUrl = `http://pdi.flowstudios.com.my/api/sop/download`;
             const filename = `SOP_General_${Date.now()}.pdf`;
             const directory = FileSystem.documentDirectory;
@@ -88,33 +81,23 @@ export default function SOP({ navigation }) { // Keep navigation prop for Back b
             if (downloadResult.status === 200) {
                 console.log('Download finished:', downloadResult.uri);
 
-                // --- Use Sharing to open externally ---
                 if (!(await Sharing.isAvailableAsync())) {
                     Alert.alert(
                         'Sharing Not Available',
                         'Cannot open PDF viewer automatically. The file is downloaded.'
                         );
-                    // Fallback example: Copy URI to clipboard
-                    // try {
-                    //     await Clipboard.setStringAsync(downloadResult.uri);
-                    //     Alert.alert('File URI Copied', 'The file location has been copied to your clipboard.');
-                    // } catch (copyError) {
-                    //     console.error("Failed to copy URI to clipboard", copyError);
-                    // }
-                     setIsDownloading(false); // Still need to reset state
+                     setIsDownloading(false);
                      return;
                 }
 
                 console.log('Attempting to share URI:', downloadResult.uri);
                 await Sharing.shareAsync(downloadResult.uri, {
-                    mimeType: 'application/pdf', // Set MIME type for PDF
-                    dialogTitle: 'Open SOP PDF with...', // Customize dialog title
-                    UTI: 'com.adobe.pdf' // Optional: UTI hint for iOS
+                    mimeType: 'application/pdf',
+                    dialogTitle: 'Open SOP PDF with...',
+                    UTI: 'com.adobe.pdf'
                 });
-                 // --- End Sharing ---
 
             } else {
-                 // Error handling for non-200 status
                  let errorMessage = `Server responded with status: ${downloadResult.status}`;
                  try {
                      const errorBody = await FileSystem.readAsStringAsync(localUri);
@@ -141,7 +124,6 @@ export default function SOP({ navigation }) { // Keep navigation prop for Back b
                 catch (deleteError) { console.error("Error cleaning up failed download:", deleteError); }
             }
 
-            // Error Alert
             let alertMessage = `Could not download or open the SOP PDF.\n\nError: ${error.message}`;
             if (error.message.includes('usesCleartextTraffic') || error.message.includes('App Transport Security')) {
                  alertMessage += '\n\nNote: Using HTTP might require platform configuration.';
@@ -157,7 +139,6 @@ export default function SOP({ navigation }) { // Keep navigation prop for Back b
         }
     };
 
-    // Dropdown Handlers
     const toggleModelDropdown = () => {
         setShowModelDropdown(!showModelDropdown);
         setShowVariantDropdown(false);
@@ -271,7 +252,6 @@ export default function SOP({ navigation }) { // Keep navigation prop for Back b
     );
 }
 
-// --- Local Styles (Copied from your original code) ---
 const localStyles = StyleSheet.create({
     scrollView: { flex: 1 },
     scrollContentContainer: { paddingHorizontal: PADDING.medium, paddingTop: PADDING.small, paddingBottom: PADDING.large },
