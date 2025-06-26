@@ -212,50 +212,64 @@ export default function InspectionPage({ navigation }) {
         setIsSubmittingConfirm(false); // Ensure loading stops
     }
   };
+  const formatDate = (dateString) => {
+    if (!dateString){
+        return 'N/A';
+    }
+
+    const date = new Date(dateString);
+
+    if (isNaN(date.getTime())){
+        return 'N/A';
+    }
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month =String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}-${month}-${year}`;
+ };
   // --- End New Functions ---
 
-
-  // --- Render Content --- (Original renderContent with minor key adjustment) ---
-  const renderContent = () => {
+const renderContent = () => {
     if (isLoading) { /* ... */ return <ActivityIndicator size="large" color={COLORS.primary} style={commonStyles.loadingIndicator} />; }
     if (error) { /* ... */ return <Text style={commonStyles.errorText}>Error: {error}</Text>; }
-     if (!isLoading && filteredVehicles.length === 0) { /* ... */ const message = "..."; return <Text style={commonStyles.noDataText}>{message}</Text>; }
-     return (
-         <ScrollView style={localStyles.listScrollView} contentContainerStyle={localStyles.listScrollViewContent} keyboardShouldPersistTaps="handled" >
-             {filteredVehicles.map((vehicle) => (
-                 // Use jobcard_id if available and unique, otherwise chassis_no is okay if unique in the list
-                 <View key={vehicle.jobcard_id || vehicle.chassis_no} style={localStyles.vehicleBox}>
-                     <Text style={localStyles.vehicleTextBold}>Chassis No: <Text style={localStyles.vehicleText}>{vehicle.chassis_no || 'N/A'}</Text></Text>
-                     <Text style={localStyles.vehicleTextBold}>Colour: <Text style={localStyles.vehicleText}>{vehicle.colour_code || 'N/A'}</Text></Text>
-                     <Text style={localStyles.vehicleTextBold}>Engine No: <Text style={localStyles.vehicleText}>{vehicle.engine_no || 'N/A'}</Text></Text>
-                     {/* Check if 'items' exists and is an array before accessing length */}
-                     <Text style={[ localStyles.vehicleTextBold, Array.isArray(vehicle.items) && vehicle.items.length > 0 ? localStyles.defectsText : {} ]}>
-                         Reported Defects: <Text style={localStyles.vehicleText}>{Array.isArray(vehicle.items) ? vehicle.items.length : 'N/A'}</Text>
-                     </Text>
+    if (!isLoading && filteredVehicles.length === 0) { /* ... */ const message = "No vehicles found matching your criteria."; return <Text style={commonStyles.noDataText}>{message}</Text>; }
+    
+    return (
+        <ScrollView style={localStyles.listScrollView} contentContainerStyle={localStyles.listScrollViewContent} keyboardShouldPersistTaps="handled" >
+            {filteredVehicles.map((vehicle) => (
+                <View key={vehicle.jobcard_id || vehicle.chassis_no} style={localStyles.vehicleBox}>
+                    <Text style={localStyles.vehicleTextBold}>Chassis No: <Text style={localStyles.vehicleText}>{vehicle.chassis_no || 'N/A'}</Text></Text>
+                    <Text style={localStyles.vehicleTextBold}>Colour: <Text style={localStyles.vehicleText}>{vehicle.colour_code || 'N/A'}</Text></Text>
+                    <Text style={localStyles.vehicleTextBold}>Engine No: <Text style={localStyles.vehicleText}>{vehicle.engine_no || 'N/A'}</Text></Text>
+                    <Text style={localStyles.vehicleTextBold}>PDI Date: <Text style={localStyles.vehicleText}>{formatDate(vehicle.approval_time)}</Text></Text>
+                    
+                    <Text style={[ localStyles.vehicleTextBold, Array.isArray(vehicle.items) && vehicle.items.length > 0 ? localStyles.defectsText : {} ]}>
+                        Reported Defects: <Text style={localStyles.vehicleText}>{Array.isArray(vehicle.items) ? vehicle.items.length : 'N/A'}</Text>
+                    </Text>
 
-                     <View style={localStyles.buttonContainer}>
-                         {/* Logic assumes 'rectified' means final decision already made */}
-                         {/* If 'rectified' only refers to defect fixing, adjust this logic */}
-                         {vehicle.rectified === true || vehicle.rectified === 1 ? (
-                             <TouchableOpacity style={localStyles.viewButton} onPress={() => navigation.navigate('InspectionInfo', { chassisNo: vehicle.chassis_no })} >
-                                 <Text style={localStyles.buttonTextWhite}>View Details</Text>
-                             </TouchableOpacity>
-                         ) : (
-                             <>
-                                 <TouchableOpacity style={localStyles.nokButton} onPress={() => handlePdiNok(vehicle.chassis_no)} >
-                                     <Text style={localStyles.buttonTextWhite}>PDI NOK</Text>
-                                 </TouchableOpacity>
-                                 <TouchableOpacity style={localStyles.okButton} onPress={() => handlePdiOk(vehicle.chassis_no)} >
-                                     <Text style={localStyles.buttonTextWhite}>PDI OK</Text>
-                                 </TouchableOpacity>
-                             </>
-                         )}
-                     </View>
-                 </View>
-             ))}
-         </ScrollView>
-     );
- }
+                    <View style={localStyles.buttonContainer}>
+                        {vehicle.rectified === true || vehicle.rectified === 1 ? (
+                            <TouchableOpacity style={localStyles.viewButton} onPress={() => navigation.navigate('InspectionInfo', { chassisNo: vehicle.chassis_no })} >
+                                <Text style={localStyles.buttonTextWhite}>View Details</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <>
+                                <TouchableOpacity style={localStyles.nokButton} onPress={() => handlePdiNok(vehicle.chassis_no)} >
+                                    <Text style={localStyles.buttonTextWhite}>PDI NOK</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={localStyles.okButton} onPress={() => handlePdiOk(vehicle.chassis_no)} >
+                                    <Text style={localStyles.buttonTextWhite}>PDI OK</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+                    </View>
+                </View>
+            ))}
+        </ScrollView>
+    );
+}
 
   // --- RETURN JSX ---
   return (
